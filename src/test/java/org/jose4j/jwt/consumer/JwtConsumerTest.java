@@ -2105,4 +2105,88 @@ public class JwtConsumerTest
 
     }
 
+    @Test
+    public void databrokerAtAndIdToken() throws Exception
+    {
+        // just testing some content produced by a different system as a compatibility check in
+        // the unit tests
+
+        String jwtAt = "eyJraWQiOiJBY2Nlc3MgVG9rZW4gU2lnbmluZyBLZXkgUGFpciIsImFsZyI6IlJTNTEyIn0." +
+                "eyJzdWIiOiJVc2Vyc1wvNTgzZjQ0Y2ItNjk4MC00NTk5LWJjZGMtYzdlMzRmZGE5YTRiIiwic2NvcG" +
+                "UiOiJ1cm46cGluZ2lkZW50aXR5OnNjb3BlOm1hbmFnZV90b3RwIHVybjpwaW5naWRlbnRpdHk6c2Nv" +
+                "cGU6bWFuYWdlX2V4dGVybmFsX2lkZW50aXRpZXMgdXJuOnBpbmdpZGVudGl0eTpzY29wZTpjaGFuZ2" +
+                "VfcGFzc3dvcmQgdXJuOnBpbmdpZGVudGl0eTpzY29wZTp2YWxpZGF0ZV9waG9uZV9udW1iZXIgdXJu" +
+                "OnBpbmdpZGVudGl0eTpzY29wZTp2YWxpZGF0ZV9lbWFpbF9hZGRyZXNzIHVybjpwaW5naWRlbnRpdH" +
+                "k6c2NvcGU6cGFzc3dvcmRfcXVhbGl0eV9yZXF1aXJlbWVudHMgdXJuOnBpbmdpZGVudGl0eTpzY29w" +
+                "ZTptYW5hZ2VfY29uc2VudHMgdXJuOnBpbmdpZGVudGl0eTpzY29wZTptYW5hZ2VfcHJvZmlsZSB1cm" +
+                "46cGluZ2lkZW50aXR5OnNjb3BlOm1hbmFnZV9zZXNzaW9ucyIsImV4cCI6MTQ4NjEwMjc4NywiaWF0" +
+                "IjoxNDg2MDU5NTg3LCJjbGllbnRfaWQiOiJAbXktYWNjb3VudEAiLCJqdGkiOiJhLm1KNThpdyJ9." +
+                "J5LjQyKbLzPGgjtoFI6vNzguy5DhLAQiEtLj035cHDo9_sZbqVwc2z-kCt5jTOtcOVaBOO8nErdyBk" +
+                "k2S7-_t_nWQWims2EBTpvs5NXdP8M__1Y7PB0YUHaUNIf4EdgO0oxcxh0QWN6Wz2UbFgMN2Qav-7eT" +
+                "--RVTe37VZST0H1k8xbECRJUFbb949RkfZXE2Of7xy_LJEGjBNNEOwkm9YOo3Cuf1fG8la-xovD3fR" +
+                "Hduc9VZ4CDpXuwwaBYxAnSNcmR4e9cw1ke_Uu6Op0OAJ9tJcb-i4k3F3WI1Yb6VteoYTC0URpBpyfs" +
+                "A4bI0lZi_S8Bdx_7patIJE-DRamPDg";
+
+        // encoding of n is using base64 rather than base64url but jose4j can accept either even
+        // though it's not per spec
+        String jwksJson = "{\"keys\":[" +
+                "{\"kty\":\"RSA\",\"use\":\"sig\"," +
+                 "\"kid\":\"Access Token Signing Key Pair\"," +
+                 "\"n\":\"AIKoYDcZLHB1GKacf7mGfzz8LUmT4rHzEOlQLM1FBsxLNZ40BAONAcTUlf3JyOQujrR4on" +
+                  "h/cIh6O+38FDw953irZMURzvD0GvWjiX/KTuaJ6zOr9zbamTDF0nQPB5Q9VwOTGdyDnKTNR9b/Vsu" +
+                  "+dAaDBOi32wZ4gZWFVXOCD1EGy2gX99gwBCOCkK0GQI4VmifNI3omeG727l5jpnsfpzkZuluQBHl3" +
+                  "+CV/TPPvyGP/4i5wUAhpZv+s6rnKIgp0bNrE6jQ2EzO9sTk10jr/L4mJ7kSN7OLyXiXWz5K1J3REa" +
+                  "u+Fl371zOe2erLHzWrXxFh3s6iKcyZElnTXO3Ljwxs=\"," +
+                 "\"e\":\"AQAB\"," +
+                 "\"x5c\":[\"MIIDIzCCAgugAwIBAgIERXO5bzANBgkqhkiG9w0BAQsFADBCMR8wHQYDVQQKExZQaW5" +
+                  "nIElkZW50aXR5IEtleSBQYWlyMR8wHQYDVQQDExZEYXRhIEdvdmVybmFuY2UgQnJva2VyMB4XDTE3" +
+                  "MDIwMTIzMDY1NVoXDTM3MDEyNzIzMDY1NVowQjEfMB0GA1UEChMWUGluZyBJZGVudGl0eSBLZXkgU" +
+                  "GFpcjEfMB0GA1UEAxMWRGF0YSBHb3Zlcm5hbmNlIEJyb2tlcjCCASIwDQYJKoZIhvcNAQEBBQADgg" +
+                  "EPADCCAQoCggEBAIKoYDcZLHB1GKacf7mGfzz8LUmT4rHzEOlQLM1FBsxLNZ40BAONAcTUlf3JyOQ" +
+                  "ujrR4onh/cIh6O+38FDw953irZMURzvD0GvWjiX/KTuaJ6zOr9zbamTDF0nQPB5Q9VwOTGdyDnKTN" +
+                  "R9b/Vsu+dAaDBOi32wZ4gZWFVXOCD1EGy2gX99gwBCOCkK0GQI4VmifNI3omeG727l5jpnsfpzkZu" +
+                  "luQBHl3+CV/TPPvyGP/4i5wUAhpZv+s6rnKIgp0bNrE6jQ2EzO9sTk10jr/L4mJ7kSN7OLyXiXWz5" +
+                  "K1J3REau+Fl371zOe2erLHzWrXxFh3s6iKcyZElnTXO3LjwxsCAwEAAaMhMB8wHQYDVR0OBBYEFCc" +
+                  "K/2ZcyzmDUW5CluqLc1KLKyeSMA0GCSqGSIb3DQEBCwUAA4IBAQBlRYvmBzzNjMNeb/zjcT2ysn1v" +
+                  "ji8AZdPhdD1oMiSmV2yVF8ln09ckYUglghf3j041NXC676/NtcKBEztVFFQ3jOExDnwFD9YHkOE49" +
+                  "FeTNWssq2UTwZVfw/+Vt7cFp1BVpUihwIs5vxaxA2LmLwswYgjUgU2G/G8k6oy/kvM2AT4JzXdsy8" +
+                  "uwQCe68wI8F2k4wMfiz7i7df9jDWtfMzxOH9q5Gp3xMZWm/PUzzRjDVe1qJ+RvBC0YS7u/UgYXHKc" +
+                  "tzJBZsJXq8ePVJC1U3z6/72VDj0m7IUEy8BIljhWOde9yHIwJrquBRY9xzDxGNGargPKXdRqjkzCO" +
+                  "T4puYyhV\"]}]}";
+
+        JsonWebKeySet jwks = new JsonWebKeySet(jwksJson);
+
+        JwksVerificationKeyResolver verificationKeyResolver = new JwksVerificationKeyResolver(jwks.getJsonWebKeys());
+        JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                .setRequireExpirationTime()
+                .setVerificationKeyResolver(verificationKeyResolver)
+                .setEvaluationTime(NumericDate.fromSeconds(1486059597))
+                .build();
+
+        JwtContext ctx = jwtConsumer.process(jwtAt);
+        assertThat("Users/583f44cb-6980-4599-bcdc-c7e34fda9a4b", equalTo(ctx.getJwtClaims().getSubject()));
+
+        String jwtIdToken = "eyJraWQiOiJBY2Nlc3MgVG9rZW4gU2lnbmluZyBLZXkgUGFpciIsImFsZyI6IlJTMjU2In0." +
+                "eyJhdF9oYXNoIjoiRHV5TTVOMlRqaEwzSklMZkdBbklwZyIsImFjciI6IkRlZmF1bHQiLCJzdWIiOiJVc2V" +
+                "yc1wvNTgzZjQ0Y2ItNjk4MC00NTk5LWJjZGMtYzdlMzRmZGE5YTRiIiwiYXVkIjoiQG15LWFjY291bnRAIi" +
+                "wiYW1yIjpbInB3ZCJdLCJhdXRoX3RpbWUiOjE0ODY0MTM0ODMsImlzcyI6Imh0dHBzOlwvXC9sb2NhbGhvc" +
+                "3QiLCJleHAiOjE0ODY0MTQ3NjMsImlhdCI6MTQ4NjQxMzg2Mywibm9uY2UiOiJhZGZzIn0." +
+                "SKa7zfhXRc0bEhMilnJPtjitRmLdFux_2EM8shwC5PW44Yx6Ji0BVebeY0Q9lQ7NK5QV7JI5dUjlDT4rfLi" +
+                "MDa64hUkJQF6AxQkT70xT1vuHs7e34oBuGDQKlDqe5mtKVM-6qX2aW8ILHCELQc_N7dND2KzLzqaH9pf2aX" +
+                "SmPS5xo8VF4nAhy5L_G7wW9wqeI4FDt8pVuvG--iptP98TecIV85pKe5iRSRwqrSEWUCVdA1cuvmyXcAFg1" +
+                "jpGNwZ2GHhmTPvld5_nGUhrFFZnBYhJLBkbhY0E02ongrlmwvEVUVN1Qvnx18dSBErQ5kOXyfcbdp-S_cIT" +
+                "o0tXJmxJ7g";
+
+        jwtConsumer = new JwtConsumerBuilder()
+                .setRequireExpirationTime()
+                .setRequireIssuedAt()
+                .setVerificationKeyResolver(verificationKeyResolver)
+                .setExpectedAudience("@my-account@")
+                .setExpectedIssuer("https://localhost")
+                .setEvaluationTime(NumericDate.fromSeconds(1486413864))
+                .build();
+
+        ctx = jwtConsumer.process(jwtIdToken);
+        assertThat("Users/583f44cb-6980-4599-bcdc-c7e34fda9a4b", equalTo(ctx.getJwtClaims().getSubject()));
+    }
 }
