@@ -28,6 +28,7 @@ import org.jose4j.jwx.HeaderParameterNames;
 import org.jose4j.jwx.Headers;
 import org.jose4j.jwx.KeyValidationSupport;
 import org.jose4j.keys.EcKeyUtil;
+import org.jose4j.keys.EllipticCurves;
 import org.jose4j.keys.KeyPersuasion;
 import org.jose4j.lang.ByteUtil;
 import org.jose4j.lang.InvalidKeyException;
@@ -36,6 +37,7 @@ import org.jose4j.lang.UncheckedJoseException;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -44,6 +46,10 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECFieldFp;
+import java.security.spec.ECParameterSpec;
+import java.security.spec.ECPoint;
+import java.security.spec.EllipticCurve;
 
 /**
  */
@@ -87,11 +93,40 @@ public class EcdhKeyAgreementAlgorithm extends AlgorithmInfo implements KeyManag
     {
         String keyFactoryProvider = providerContext.getGeneralProviderContext().getKeyFactoryProvider();
         JsonWebKey ephemeralJwk = headers.getPublicJwkHeaderValue(HeaderParameterNames.EPHEMERAL_PUBLIC_KEY, keyFactoryProvider);
-        ephemeralJwk.getKey();
-        byte[] z = generateEcdhSecret((PrivateKey) managementKey, (PublicKey)ephemeralJwk.getKey(), providerContext);
+        ECPublicKey ephemeralPublicKey = (ECPublicKey) ephemeralJwk.getKey();
+        ECPrivateKey privateKey = (ECPrivateKey) managementKey;
+        checkPointIsOnCurve(ephemeralPublicKey, privateKey);
+        byte[] z = generateEcdhSecret((ECPrivateKey) managementKey, ephemeralPublicKey, providerContext);
         byte[] derivedKey = kdf(cekDesc, headers, z, providerContext);
         String cekAlg = cekDesc.getContentEncryptionKeyAlgorithm();
         return new SecretKeySpec(derivedKey, cekAlg);
+    }
+
+    private void checkPointIsOnCurve(ECPublicKey ephemeralPublicKey, ECPrivateKey privateKey) throws JoseException
+    {
+        // to prevent 'Invalid Curve Attack': for NIST curves, check whether public key is on the private key's curve.
+        // from https://www.cs.bris.ac.uk/Research/CryptographySecurity/RWC/2017/nguyen.quan.pdf
+
+        // there appear to be similar checks in the JVM starting with 1.8.0_51 but
+        // doing it here explicitly seems prudent
+
+        // (y^2) mod p = (x^3 + ax + b) mod p
+        // thanks to Antonio Sanso for guidance on how to do this check
+        ECParameterSpec ecParameterSpec = privateKey.getParams();
+        EllipticCurve curve = ecParameterSpec.getCurve();
+        ECPoint point = ephemeralPublicKey.getW();
+        BigInteger x = point.getAffineX();
+        BigInteger y = point.getAffineY();
+        BigInteger a = curve.getA();
+        BigInteger b = curve.getB();
+        BigInteger p = ((ECFieldFp) curve.getField()).getP();
+        BigInteger leftSide = (y.pow(2)).mod(p);
+        BigInteger rightSide = (x.pow(3).add(a.multiply(x)).add(b)).mod(p);
+        boolean onCurve = leftSide.equals(rightSide);
+        if (!onCurve)
+        {
+            throw new JoseException(HeaderParameterNames.EPHEMERAL_PUBLIC_KEY + " is invalid for " + EllipticCurves.getName(curve));
+        }
     }
 
     private byte[] kdf(ContentEncryptionKeyDescriptor cekDesc, Headers headers, byte[] z, ProviderContext providerContext)
