@@ -47,6 +47,7 @@ public class JsonWebEncryptionTest
     public void testJweExampleA3() throws JoseException
     {
         // http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-14#appendix-A.3
+        // eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0 == {"alg":"A128KW","enc":"A128CBC-HS256"}
         String jweCsFromAppdxA3 = "eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0." +
                 "6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ." +
                 "AxY8DCtDaGlsbGljb3RoZQ." +
@@ -58,7 +59,7 @@ public class JsonWebEncryptionTest
                 "{\"kty\":\"oct\",\n" +
                 " \"k\":\"GawgguFyGrWKav7AX4VKUg\"\n" +
                 "}");
-
+        jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.A128KW));
         jwe.setCompactSerialization(jweCsFromAppdxA3);
         jwe.setKey(new AesKey(jsonWebKey.getKey().getEncoded()));
 
@@ -71,6 +72,7 @@ public class JsonWebEncryptionTest
     public void testJweExampleA2() throws JoseException
     {
         // http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-14#appendix-A.2
+        // eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0 == {"alg":"RSA1_5","enc":"A128CBC-HS256"}
         String jweCsFromAppendixA2 = "eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0." +
                 "UGhIOguC7IuEvf_NPVaXsGMoLOmwvc1GyqlIKOK1nN94nHPoltGRhWhw7Zx0-kFm" +
                 "1NJn8LE9XShH59_i8J0PH5ZZyNfGy2xGdULU7sHNF6Gp2vPLgNZ__deLKxGHZ7Pc" +
@@ -83,6 +85,7 @@ public class JsonWebEncryptionTest
                 "9hH0vgRfYgPnAHOd8stkvw";
 
         JsonWebEncryption jwe = new JsonWebEncryption();
+        jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.RSA1_5));
         jwe.setKey(ExampleRsaJwksFromJwe.APPENDIX_A_2.getPrivateKey());
         jwe.setCompactSerialization(jweCsFromAppendixA2);
         String plaintextString = jwe.getPlaintextString();
@@ -114,6 +117,7 @@ public class JsonWebEncryptionTest
                                 "XFBoMYUZodetZdvTiFvSkQ";
 
                 JsonWebEncryption jwe = new JsonWebEncryption();
+                jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.RSA_OAEP));
                 jwe.setCompactSerialization(cs);
                 jwe.setKey(ExampleRsaJwksFromJwe.APPENDIX_A_1.getPrivateKey());
                 String examplePlaintext = "The true sign of intelligence is not knowledge but imagination.";
@@ -135,6 +139,7 @@ public class JsonWebEncryptionTest
         String compactSerialization = jweForEncrypt.getCompactSerialization();
 
         JsonWebEncryption jweForDecrypt = new JsonWebEncryption();
+        jweForDecrypt.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.RSA1_5));
         jweForDecrypt.setCompactSerialization(compactSerialization);
         jweForDecrypt.setKey(ExampleRsaJwksFromJwe.APPENDIX_A_2.getPrivateKey());
 
