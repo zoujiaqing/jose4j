@@ -16,6 +16,7 @@
 
 package org.jose4j.examples;
 
+import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
@@ -579,6 +580,13 @@ public void jweRoundTripExample() throws JoseException
 
     // That other party, the receiver, can then use JsonWebEncryption to decrypt the message.
     JsonWebEncryption receiverJwe = new JsonWebEncryption();
+
+    // Set the algorithm constraints based on what is agreed upon or expected from the sender
+    AlgorithmConstraints.ConstraintType wl = AlgorithmConstraints.ConstraintType.WHITELIST;
+    AlgorithmConstraints algConstraints = new AlgorithmConstraints(wl, KeyManagementAlgorithmIdentifiers.DIRECT);
+    receiverJwe.setAlgorithmConstraints(algConstraints);
+    AlgorithmConstraints encConstraints = new AlgorithmConstraints(wl, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+    receiverJwe.setContentEncryptionAlgorithmConstraints(encConstraints);
 
     // Set the compact serialization on new Json Web Encryption object
     receiverJwe.setCompactSerialization(compactSerialization);

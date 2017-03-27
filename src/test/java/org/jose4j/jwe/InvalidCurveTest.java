@@ -1,7 +1,9 @@
 package org.jose4j.jwe;
 
-import org.jose4j.jwk.PublicJsonWebKey;
+import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.WHITELIST;
 
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwk.PublicJsonWebKey;
 import org.jose4j.lang.JoseException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,6 +55,7 @@ public class InvalidCurveTest
         log.debug("JWE w/ {} & {}: {}", alg, enc, maliciousJWE1);
 
         JsonWebEncryption receiverJwe1 = new JsonWebEncryption();
+        receiverJwe1.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW));
         receiverJwe1.setCompactSerialization(maliciousJWE1);
         receiverJwe1.setKey(receiverJwk.getPrivateKey());
         //this proof that receiverPrivateKey is equals 26 % 113
@@ -80,6 +83,7 @@ public class InvalidCurveTest
         log.debug("JWE w/ {} & {}: {}", alg, enc, maliciousJWE1);
 
         JsonWebEncryption receiverJwe2 = new JsonWebEncryption();
+        receiverJwe2.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW));
         receiverJwe2.setCompactSerialization(maliciousJWE2);
         receiverJwe2.setKey(receiverJwk.getPrivateKey());
         //this proof that receiverPrivateKey is equals 2446 % 2447

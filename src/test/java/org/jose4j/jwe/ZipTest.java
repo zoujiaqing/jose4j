@@ -17,7 +17,10 @@
 
 package org.jose4j.jwe;
 
+import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.WHITELIST;
 import junit.framework.TestCase;
+
+import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.jwx.HeaderParameterNames;
 import org.jose4j.keys.AesKey;
@@ -104,6 +107,7 @@ public class ZipTest extends TestCase
         JsonWebKey jsonWebKey = JsonWebKey.Factory.newJwk("{\"kty\":\"oct\",\"k\":\"q1qm8z2sLFt_CPqwpLuGm-fX6ZKQKnukPHpoJOeykCw\"}");
 
         JsonWebEncryption jwe = new JsonWebEncryption();
+        jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.DIRECT)); // does not matter here
         jwe.setKey(jsonWebKey.getKey());
         jwe.setCompactSerialization(cs);
 
