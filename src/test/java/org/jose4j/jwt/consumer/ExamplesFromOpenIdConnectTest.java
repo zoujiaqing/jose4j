@@ -17,6 +17,7 @@
 package org.jose4j.jwt.consumer;
 
 import org.jose4j.jwk.JsonWebKey;
+import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
@@ -76,6 +77,7 @@ public class ExamplesFromOpenIdConnectTest
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJson);
 
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
         jws.setCompactSerialization(requestObject);
         jws.setKey(jwk.getKey());
         assertThat(jws.verifySignature(), is(true));

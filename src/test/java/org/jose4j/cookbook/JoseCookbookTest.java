@@ -456,6 +456,7 @@ public class JoseCookbookTest
 
         // verify consuming the JWS
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, alg));
         jws.setCompactSerialization(jwsCompactSerialization);
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(figure3RsaJwkJsonString);
         jws.setKey(jwk.getKey());
@@ -506,6 +507,7 @@ public class JoseCookbookTest
                         "6GYmJUAfmWjwZ6oD4ifKo8DYM-X72Eaw";
 
                 JsonWebSignature jws = new JsonWebSignature();
+                jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.RSA_PSS_USING_SHA384));
                 jws.setCompactSerialization(cs);
                 jws.setKey(jwk.getPublicKey());
                 assertThat(jws.verifySignature(), is(true));
@@ -559,6 +561,7 @@ public class JoseCookbookTest
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJson);
 
         jws.setKey(jwk.getKey());
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, alg));
         assertThat(jws.getUnverifiedPayload(), equalTo(jwsPayload));
 
         assertThat(jws.verifySignature(), is(true));
@@ -596,6 +599,7 @@ public class JoseCookbookTest
 
         // verify consuming the JWS
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, alg));
         jws.setCompactSerialization(jwsCompactSerialization);
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJson);
         jws.setKey(jwk.getKey());
@@ -632,6 +636,7 @@ public class JoseCookbookTest
                 "s0h6KThzkfBBBkLspW1h84VsJZFTsPPqMDA7g1Md7p0";
 
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.HMAC_SHA256));
         jws.setCompactSerialization(detachedCs);
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJsonString);
         jws.setKey(jwk.getKey());
@@ -959,6 +964,7 @@ public class JoseCookbookTest
         jwe.setContentEncryptionAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256));
         jwe.setCompactSerialization(exampleCompactSerialization);
         jwe.setKey(new PbkdfKey(password));
+        jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW));
         assertThat(plaintext, equalTo(jwe.getPlaintextString()));
 
         // verify that we can reproduce it from the inputs
@@ -1163,6 +1169,7 @@ public class JoseCookbookTest
                         "     \"k\": \"qC57l_uxcm7Nm3K-ct4GFjx8tM1U8CZ0NLBvdQstiS8\"\n" +
                         "   }");
 
+                // {"alg":"dir","kid":"77c7e2b8-6e13-45cf-8672-617b5b45243a","enc":"A128GCM"}
                 String cs =
                         "eyJhbGciOiJBMjU2R0NNS1ciLCJraWQiOiIxOGVjMDhlMS1iZmE5LTRkOTUtYj" +
                         "IwNS0yYjRkZDFkNDMyMWQiLCJ0YWciOiJrZlBkdVZRM1QzSDZ2bmV3dC0ta3N3" +
@@ -1387,6 +1394,7 @@ public class JoseCookbookTest
                 PublicJsonWebKey sigJwk = PublicJsonWebKey.Factory.newPublicJwk(sigJwkJson);
 
                 JsonWebSignature jws = new JsonWebSignature();
+                jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.RSA_PSS_USING_SHA256));
                 jws.setCompactSerialization(jwePayload);
                 jws.setKey(sigJwk.getPublicKey());
                 assertTrue(jws.verifySignature());
