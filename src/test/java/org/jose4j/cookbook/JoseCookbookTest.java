@@ -980,7 +980,6 @@ public class JoseCookbookTest
         jwe.setContentEncryptionAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256));
         jwe.setCompactSerialization(exampleCompactSerialization);
         jwe.setKey(new PbkdfKey(password));
-        jwe.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW));
         assertThat(plaintext, equalTo(jwe.getPlaintextString()));
 
         // verify that we can reproduce it from the inputs
