@@ -16,6 +16,8 @@
 
 package org.jose4j.jwt.consumer;
 
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
@@ -77,7 +79,7 @@ public class ExamplesFromOpenIdConnectTest
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJson);
 
         JsonWebSignature jws = new JsonWebSignature();
-        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.RSA_USING_SHA256));
         jws.setCompactSerialization(requestObject);
         jws.setKey(jwk.getKey());
         assertThat(jws.verifySignature(), is(true));
