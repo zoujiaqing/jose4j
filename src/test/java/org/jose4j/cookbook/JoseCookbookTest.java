@@ -16,13 +16,37 @@
 
 package org.jose4j.cookbook;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.WHITELIST;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
+import java.security.Key;
+import java.util.Map;
+
 import org.jose4j.base64url.Base64Url;
 import org.jose4j.jca.ProviderContextTest;
 import org.jose4j.json.JsonUtil;
 import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwa.JceProviderTestSupport;
-import org.jose4j.jwe.*;
-import org.jose4j.jwk.*;
+import org.jose4j.jwa.JceProviderTestSupport.RunnableTest;
+import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
+import org.jose4j.jwe.ContentEncryptionKeyDescriptor;
+import org.jose4j.jwe.JsonWebEncryption;
+import org.jose4j.jwe.KeyManagementAlgorithm;
+import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
+import org.jose4j.jwk.EllipticCurveJsonWebKey;
+import org.jose4j.jwk.JsonWebKey;
+import org.jose4j.jwk.OctetSequenceJsonWebKey;
+import org.jose4j.jwk.PublicJsonWebKey;
+import org.jose4j.jwk.RsaJsonWebKey;
+import org.jose4j.jwk.Use;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
@@ -38,14 +62,6 @@ import org.jose4j.keys.PbkdfKey;
 import org.jose4j.lang.JoseException;
 import org.jose4j.lang.JsonHelp;
 import org.junit.Test;
-
-import java.security.Key;
-import java.util.Map;
-
-import static org.hamcrest.CoreMatchers.*;
-import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.WHITELIST;
-import static org.jose4j.jwa.JceProviderTestSupport.*;
-import static org.junit.Assert.*;
 
 /**
  * Tests of the examples from the JOSE Cookbook.
