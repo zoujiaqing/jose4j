@@ -18,6 +18,8 @@ package org.jose4j.jws;
 
 import org.jose4j.lang.ExceptionHelp;
 import org.junit.Assert;
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwx.CompactSerializer;
 import org.jose4j.lang.InvalidKeyException;
 import org.jose4j.lang.JoseException;
@@ -52,23 +54,27 @@ public class JwsTestSupport
         Assert.assertFalse(serializationWithKey1.equals(serializationWithKey2));
 
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, jwsAlgo));
         jws.setCompactSerialization(serializationWithKey1);
         jws.setKey(verificationKey1);
         Assert.assertTrue(jws.verifySignature());
         Assert.assertEquals(payload, jws.getPayload());
 
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, jwsAlgo));
         jws.setCompactSerialization(serializationWithKey2);
         jws.setKey(verificationKey1);
         Assert.assertFalse(jws.verifySignature());
 
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, jwsAlgo));
         jws.setCompactSerialization(serializationWithKey2);
         jws.setKey(verificationKey2);
         Assert.assertTrue(jws.verifySignature());
         Assert.assertEquals(payload, jws.getPayload());
 
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, jwsAlgo));
         jws.setCompactSerialization(serializationWithKey1);
         jws.setKey(verificationKey2);
         Assert.assertFalse(jws.verifySignature());

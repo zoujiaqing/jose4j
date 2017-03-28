@@ -17,6 +17,8 @@
 package org.jose4j.jws;
 
 import org.jose4j.base64url.Base64Url;
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.lang.ByteUtil;
 import org.jose4j.lang.JoseException;
@@ -139,7 +141,7 @@ public class EcdsaUsingShaAlgorithmTest
             between versions. The JWS compact serializations here were all produced with the buggy code from 0.3.4
             and this test checks that jose4j can still validate the signatures.
          */
-
+    	String alg = "ES512";
         String jwk = "{\"kty\":\"EC\"," +
                 "\"x\":\"APlFpj7M-Kj8ArsYMbJS-6rn1XkugUwngk_iTVe_KfLs6pVIb4LYz-gJ2SytwsoNkSbwq6NuNXB3kFsiYXmG0pf2\"," +
                 "\"y\":\"AebLEK2Hn_vLyDFCzQYGBrGF7eJPh2b01vZ_rK1UOXT9slDvNFK5y6yUSkG4qrVg5P0xwuw25AReYwtvwYQr8uvV\"," +
@@ -149,7 +151,7 @@ public class EcdsaUsingShaAlgorithmTest
                 "ZG9lcyBpdCBtYXR0ZXIgd2hhdCdzIGluIGhlcmU_IEkgZG9uOyd0IGtub3cuLi4." +
                 "zv6B3bm8xz6EKfQaaW-0sVVD7MYoym-cXrq2SaDGI9_EZkP244jQk1xtyX6uK8JlSXXRlYR7WJ2rCM8NOr_ZHB5b7VaJnOnJkzR" +
                 "nh3-ncI46Dhj-cbqsVqZvvylkWDxhoodVkhAPT2wnkbfS6mYHjmYzWI1YF2ub5klAunLjn8jFdg";
-        check(jwk, cs);
+        check(jwk, cs, alg);
 
         jwk = "{\"kty\":\"EC\"," +
                 "\"x\":\"ACDqsfERDEacSJUa-3M2TxIp05yVHl5yuURP0WhZvi4xfMiRsyqooEWhA9PtHEko1ELvaM0bR0hNavo597HtP5_q\"," +
@@ -161,7 +163,7 @@ public class EcdsaUsingShaAlgorithmTest
                 "k-m9qenb1rrmhpavhQ6PeklKRXn7Tu7J9Asycgj4gUELLTGHE96Di5_euQF0avKkVrorDuDdtzi-q0hnzq38ArKTpbkjRqdMonQ" +
                 "dhFTXroP6HCkSrlSWFUTxvtsoaa-VorugOxPe1wZSHafmaWotbqDJ2jXA3sSC1H3jVxx1SxXGRg";
 
-        check(jwk, cs);
+        check(jwk, cs, alg);
 
         jwk =  "{\"kty\":\"EC\"," +
                 "\"x\":\"AQ8WdkBzMgfuWCWvGIpGkyi-DZgw4a1wmTZVg9YjUzSUj8NKLDcYnUgsr4op7z8dW8WUib6dC4EGXISaye1Svp6S\"," +
@@ -172,13 +174,14 @@ public class EcdsaUsingShaAlgorithmTest
                 "ZG9lcyBpdCBtYXR0ZXIgd2hhdCdzIGluIGhlcmU_IEkgZG9uOyd0IGtub3cuLi4." +
                 "waSI2xpnm4zQeAyyRLDmoq5nf_tj9SoSxLvXWcYhpNX56UVM3PyyCkX5aIzGH25kJ-W-10QzF-tR8PoIHxlNEMgfJFGHW4Bje" +
                 "xe-juNyvnETJbDyipP_i4t0wuUIVJ1J43ihHvLhXiWgfivNjwfVikMC3mTWdyzUxwrjG4M0XaUC-w";
-        check(jwk, cs);
+        check(jwk, cs, alg);
     }
 
-    private void check(String jwkJson, String cs) throws JoseException
+    private void check(String jwkJson, String cs, String alg) throws JoseException
     {
         JsonWebKey jwk = JsonWebKey.Factory.newJwk(jwkJson);
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, alg));
         jws.setCompactSerialization(cs);
         jws.setKey(jwk.getKey());
         Assert.assertTrue(jws.verifySignature());

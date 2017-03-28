@@ -16,6 +16,8 @@
 package org.jose4j.jca;
 
 import org.hamcrest.CoreMatchers;
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwa.JceProviderTestSupport;
 import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
 import org.jose4j.jwe.JsonWebEncryption;
@@ -143,6 +145,7 @@ public class ProviderContextTest
         String jwsCompactSerialization = jws.getCompactSerialization();
 
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256));
         jws.setCompactSerialization(jwsCompactSerialization);
         jws.setKey(ExampleEcKeysFromJws.PUBLIC_256);
         jws.setProviderContext(providerCtx);
@@ -169,6 +172,7 @@ public class ProviderContextTest
         String jwsCompactSerialization = jws.getCompactSerialization();
 
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.HMAC_SHA256));
         jws.setCompactSerialization(jwsCompactSerialization);
         jws.setKey(key);
         jws.setProviderContext(providerCtx);

@@ -1,5 +1,7 @@
 package org.jose4j.jwk;
 
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.keys.EllipticCurves;
@@ -567,6 +569,7 @@ public class VerificationJwkSelectorTest
 
         VerificationJwkSelector verificationJwkSelector = new VerificationJwkSelector();
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.RSA_USING_SHA256));
         jws.setCompactSerialization("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Nvbm5lY3Qtb3AuaGVyb2t1YXBwLmNvbSIsInN1YiI6IjZiOTYyYzk1Nzk4NThkNzJjNjY0M2FiZjhkN2E2ZWJjIiwiYXVkIjoiZGIwZTdmYTNmNmQwN2ZhMjYzMjZhNzE4NjQwMGVhOTEiLCJleHAiOjE0MjA3NTI0NzAsImlhdCI6MTQyMDczMDg3MCwibm9uY2UiOiJiOGU1OTlhM2JkYTRkNDExYzhiMDc0OGM1MGQwZjQxNyJ9.FNyq7K90vW7eLmsjzUPQ8eTnTreOWXVt_WKyqS686_D_kZ9tl3_uE3tKBw004XyFwMYd-4zWhvXaDPkhFGJ6BPy_woxnQdiTobNE-jyQscp6-6keg3QRkjV-Te7F48Pyfzl-lwvzhb76ygjuv7v_1Nf49fHZb-SiQ2KmapabHpIfVvuqTQ_MZjU613XJIW0tMqFv4__fgaZD-JU6qCkVbkXpvIMg_tZDafsipJ6ZYH9_9JuXQqjzmsM6vHN53MiQZaDtwb6nLDFln6YPqmVPXJV6SLvM_vn0g5w6jvmfsPGZL-xo-iqWbYtnMK-dX4HmnLpK4JVba_OnA9NQfj2DRQ");
         List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
         List<JsonWebKey> selected = verificationJwkSelector.selectList(jws, jsonWebKeys);
@@ -940,6 +943,7 @@ public class VerificationJwkSelectorTest
 
         JsonWebKeySet jwks = new JsonWebKeySet(jwksJson);
         JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.RSA_USING_SHA256));
         jws.setCompactSerialization(jwt);
         VerificationJwkSelector verificationJwkSelector = new VerificationJwkSelector();
         JsonWebKey selectedJwk = verificationJwkSelector.select(jws, jwks.getJsonWebKeys());
@@ -951,6 +955,7 @@ public class VerificationJwkSelectorTest
                 "vYXNpczpuYW1lczp0YzpTQU1MOjIuMDphYzpjbGFzc2VzOlBhc3N3b3JkIiwiYXV0aF90aW1lIjoxNDIxMDkzMzc2fQ." +
                 "gzJQZRErEHI_v6z6dZboTPzL7p9_wXrMJIWnYZFEENgq3E1InbrZuQM3wB-mJ5r33kwMibJY7Qi4y-jvk0IYqQ";
         jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256));
         jws.setCompactSerialization(jwt);
         selectedJwk = verificationJwkSelector.select(jws, jwks.getJsonWebKeys());
         jws.setKey(selectedJwk.getKey());

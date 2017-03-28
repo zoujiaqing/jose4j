@@ -16,16 +16,34 @@
 
 package org.jose4j.examples;
 
+import java.security.Key;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.List;
+
 import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
-import org.jose4j.jwk.*;
+import org.jose4j.jwk.EcJwkGenerator;
+import org.jose4j.jwk.EllipticCurveJsonWebKey;
+import org.jose4j.jwk.HttpsJwks;
+import org.jose4j.jwk.JsonWebKey;
+import org.jose4j.jwk.JsonWebKeySet;
+import org.jose4j.jwk.RsaJsonWebKey;
+import org.jose4j.jwk.RsaJwkGenerator;
+import org.jose4j.jwk.VerificationJwkSelector;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
-import org.jose4j.jwt.consumer.*;
+import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.JwtConsumer;
+import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+import org.jose4j.jwt.consumer.JwtContext;
 import org.jose4j.keys.AesKey;
 import org.jose4j.keys.EllipticCurves;
 import org.jose4j.keys.ExampleEcKeysFromJws;
@@ -36,13 +54,6 @@ import org.jose4j.keys.resolvers.X509VerificationKeyResolver;
 import org.jose4j.lang.ByteUtil;
 import org.jose4j.lang.JoseException;
 import org.junit.Test;
-
-import java.security.Key;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * There's probably a better way to do this but this is intended as a place to write and try and maintain
@@ -444,7 +455,8 @@ public void jwsVerificationExample() throws JoseException
 
     // Create a new JsonWebSignature
     JsonWebSignature jws = new JsonWebSignature();
-
+    jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256));
+    
     // Set the compact serialization on the JWS
     jws.setCompactSerialization(compactSerialization);
 
@@ -498,6 +510,7 @@ public void parseJwksAndVerifyJwsExample() throws JoseException
 
     // Create a new JsonWebSignature object
     JsonWebSignature jws = new JsonWebSignature();
+    jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256));
 
     // Set the compact serialization on the JWS
     jws.setCompactSerialization(compactSerialization);
@@ -580,6 +593,7 @@ public void jweRoundTripExample() throws JoseException
 
     // That other party, the receiver, can then use JsonWebEncryption to decrypt the message.
     JsonWebEncryption receiverJwe = new JsonWebEncryption();
+    receiverJwe.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, KeyManagementAlgorithmIdentifiers.DIRECT));
 
     // Set the algorithm constraints based on what is agreed upon or expected from the sender
     AlgorithmConstraints.ConstraintType wl = AlgorithmConstraints.ConstraintType.WHITELIST;
