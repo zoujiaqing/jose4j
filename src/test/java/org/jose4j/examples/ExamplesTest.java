@@ -654,6 +654,10 @@ jwe.setKey(key);
 String serializedJwe = jwe.getCompactSerialization();
 System.out.println("Serialized Encrypted JWE: " + serializedJwe);
 jwe = new JsonWebEncryption();
+jwe.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST,
+        KeyManagementAlgorithmIdentifiers.A128KW));
+jwe.setContentEncryptionAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST,
+        ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256));
 jwe.setKey(key);
 jwe.setCompactSerialization(serializedJwe);
 System.out.println("Payload: " + jwe.getPayload());
