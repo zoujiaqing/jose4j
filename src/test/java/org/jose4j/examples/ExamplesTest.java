@@ -152,6 +152,16 @@ public void nestedJwtRoundTripExample() throws JoseException, InvalidJwtExceptio
     // The specific validation requirements for a JWT are context dependent, however,
     // it typically advisable to require a (reasonable) expiration time, a trusted issuer, and
     // and audience that identifies your system as the intended recipient.
+    // It is also typically good to allow only the expected algorithm(s) in the given context
+    AlgorithmConstraints jwsAlgConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
+            AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256);
+
+    AlgorithmConstraints jweAlgConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
+            KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW);
+
+    AlgorithmConstraints jweEncConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
+            ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+
     JwtConsumer jwtConsumer = new JwtConsumerBuilder()
             .setRequireExpirationTime() // the JWT must have an expiration time
             .setMaxFutureValidityInMinutes(300) // but the  expiration time can't be too crazy
@@ -160,6 +170,9 @@ public void nestedJwtRoundTripExample() throws JoseException, InvalidJwtExceptio
             .setExpectedAudience("receiver") // to whom the JWT is intended for
             .setDecryptionKey(receiverJwk.getPrivateKey()) // decrypt with the receiver's private key
             .setVerificationKey(senderJwk.getPublicKey()) // verify the signature with the sender's public key
+            .setJwsAlgorithmConstraints(jwsAlgConstraints) // limits the acceptable signature algorithm(s)
+            .setJweAlgorithmConstraints(jweAlgConstraints) // limits acceptable encryption key establishment algorithm(s)
+            .setJweContentEncryptionAlgorithmConstraints(jweEncConstraints) // limits acceptable content encryption algorithm(s)
             .build(); // create the JwtConsumer instance
 
     try
@@ -238,7 +251,7 @@ public void jwtRoundTripExample() throws JoseException, InvalidJwtException, Mal
     // Use JwtConsumerBuilder to construct an appropriate JwtConsumer, which will
     // be used to validate and process the JWT.
     // The specific validation requirements for a JWT are context dependent, however,
-    // it typically advisable to require a expiration time, a trusted issuer, and
+    // it typically advisable to require a (reasonable) expiration time, a trusted issuer, and
     // and audience that identifies your system as the intended recipient.
     // If the JWT is encrypted too, you need only provide a decryption key or
     // decryption key resolver to the builder.
@@ -249,6 +262,9 @@ public void jwtRoundTripExample() throws JoseException, InvalidJwtException, Mal
             .setExpectedIssuer("Issuer") // whom the JWT needs to have been issued by
             .setExpectedAudience("Audience") // to whom the JWT is intended for
             .setVerificationKey(rsaJsonWebKey.getKey()) // verify the signature with the public key
+            .setJwsAlgorithmConstraints( // only allow the expected signature algorithm(s) in the given context
+                    new AlgorithmConstraints(ConstraintType.WHITELIST, // which is only RS256 here
+                            AlgorithmIdentifiers.RSA_USING_SHA256))
             .build(); // create the JwtConsumer instance
 
     try
@@ -390,6 +406,11 @@ public void jwtRoundTripExample() throws JoseException, InvalidJwtException, Mal
     // each issuer, which you'd use to set up a HttpsJwksVerificationKeyResolver
     Key verificationKey = rsaJsonWebKey.getKey();
 
+    // And set up the allowed/expected algorithms
+    AlgorithmConstraints algorithmConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
+            AlgorithmIdentifiers.RSA_USING_SHA256, AlgorithmIdentifiers.RSA_USING_SHA384);
+
+
     // Using info from the JwtContext, this JwtConsumer is set up to verify
     // the signature and validate the claims.
     JwtConsumer secondPassJwtConsumer = new JwtConsumerBuilder()
@@ -399,6 +420,7 @@ public void jwtRoundTripExample() throws JoseException, InvalidJwtException, Mal
             .setAllowedClockSkewInSeconds(30)
             .setRequireSubject()
             .setExpectedAudience("Audience")
+            .setJwsAlgorithmConstraints(algorithmConstraints)
             .build();
 
     // Finally using the second JwtConsumer to actually validate the JWT. This operates on
