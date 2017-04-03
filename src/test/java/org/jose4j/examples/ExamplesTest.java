@@ -619,13 +619,11 @@ public void jweRoundTripExample() throws JoseException
 
     // That other party, the receiver, can then use JsonWebEncryption to decrypt the message.
     JsonWebEncryption receiverJwe = new JsonWebEncryption();
-    receiverJwe.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, KeyManagementAlgorithmIdentifiers.DIRECT));
 
     // Set the algorithm constraints based on what is agreed upon or expected from the sender
-    AlgorithmConstraints.ConstraintType wl = AlgorithmConstraints.ConstraintType.WHITELIST;
-    AlgorithmConstraints algConstraints = new AlgorithmConstraints(wl, KeyManagementAlgorithmIdentifiers.DIRECT);
+    AlgorithmConstraints algConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST, KeyManagementAlgorithmIdentifiers.DIRECT);
     receiverJwe.setAlgorithmConstraints(algConstraints);
-    AlgorithmConstraints encConstraints = new AlgorithmConstraints(wl, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+    AlgorithmConstraints encConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
     receiverJwe.setContentEncryptionAlgorithmConstraints(encConstraints);
 
     // Set the compact serialization on new Json Web Encryption object
