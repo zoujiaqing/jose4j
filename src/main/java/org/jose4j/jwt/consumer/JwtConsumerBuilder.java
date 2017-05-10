@@ -91,6 +91,8 @@ public class JwtConsumerBuilder
 
     private boolean relaxVerificationKeyValidation;
 
+    private boolean skipVerificationKeyResolutionOnNone;
+
     private boolean relaxDecryptionKeyValidation;
 
     private boolean skipAllValidators = false;
@@ -262,6 +264,17 @@ public class JwtConsumerBuilder
     public JwtConsumerBuilder setVerificationKeyResolver(VerificationKeyResolver verificationKeyResolver)
     {
         this.verificationKeyResolver = verificationKeyResolver;
+        return this;
+    }
+
+    /**
+     * Indicates that the JwtConsumer will not call the VerificationKeyResolver for a JWS using the
+     * 'none' algorithm.
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder setSkipVerificationKeyResolutionOnNone()
+    {
+        this.skipVerificationKeyResolutionOnNone = true;
         return this;
     }
 
@@ -645,6 +658,8 @@ public class JwtConsumerBuilder
         jwtConsumer.setLiberalContentTypeHandling(liberalContentTypeHandling);
 
         jwtConsumer.setSkipSignatureVerification(skipSignatureVerification);
+
+        jwtConsumer.setSkipVerificationKeyResolutionOnNone(skipVerificationKeyResolutionOnNone);
 
         jwtConsumer.setRelaxVerificationKeyValidation(relaxVerificationKeyValidation);
         jwtConsumer.setRelaxDecryptionKeyValidation(relaxDecryptionKeyValidation);

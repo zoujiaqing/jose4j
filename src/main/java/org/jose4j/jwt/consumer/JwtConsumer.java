@@ -19,7 +19,6 @@ package org.jose4j.jwt.consumer;
 import org.jose4j.jca.ProviderContext;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwe.JsonWebEncryption;
-import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
@@ -34,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import static org.jose4j.jws.AlgorithmIdentifiers.NONE;
 
 /**
  *
@@ -57,6 +58,8 @@ public class JwtConsumer
     private boolean skipSignatureVerification;
 
     private boolean relaxVerificationKeyValidation;
+
+    private boolean skipVerificationKeyResolutionOnNone;
 
     private boolean relaxDecryptionKeyValidation;
 
@@ -125,6 +128,11 @@ public class JwtConsumer
         this.relaxVerificationKeyValidation = relaxVerificationKeyValidation;
     }
 
+    public void setSkipVerificationKeyResolutionOnNone(boolean skipVerificationKeyResolutionOnNone)
+    {
+        this.skipVerificationKeyResolutionOnNone = skipVerificationKeyResolutionOnNone;
+    }
+
     void setRelaxDecryptionKeyValidation(boolean relaxDecryptionKeyValidation)
     {
         this.relaxDecryptionKeyValidation = relaxDecryptionKeyValidation;
@@ -170,11 +178,10 @@ public class JwtConsumer
 
             try
             {
-
-
                 if (currentJoseObject instanceof JsonWebSignature)
                 {
                     JsonWebSignature jws = (JsonWebSignature) currentJoseObject;
+                    boolean isNoneAlg = NONE.equals(jws.getAlgorithmHeaderValue());
                     if (!skipSignatureVerification)
                     {
                         if (jwsProviderContext != null)
@@ -192,8 +199,11 @@ public class JwtConsumer
                             jws.setAlgorithmConstraints(jwsAlgorithmConstraints);
                         }
 
-                        Key key = verificationKeyResolver.resolveKey(jws, nestingContext);
-                        jws.setKey(key);
+                        if (!isNoneAlg  || !skipVerificationKeyResolutionOnNone)
+                        {
+                            Key key = verificationKeyResolver.resolveKey(jws, nestingContext);
+                            jws.setKey(key);
+                        }
 
                         if (jwsCustomizer != null)
                         {
@@ -207,7 +217,7 @@ public class JwtConsumer
                     }
 
 
-                    if (!currentJoseObject.getAlgorithmHeaderValue().equals(AlgorithmIdentifiers.NONE))
+                    if (!isNoneAlg)
                     {
                         hasSignature = true;
                     }

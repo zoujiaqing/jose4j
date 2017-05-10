@@ -2189,4 +2189,68 @@ public class JwtConsumerTest
         ctx = jwtConsumer.process(jwtIdToken);
         assertThat("Users/583f44cb-6980-4599-bcdc-c7e34fda9a4b", equalTo(ctx.getJwtClaims().getSubject()));
     }
+
+    @Test
+    public void testSkipVerificationKeyResolutionOnNone() throws Exception
+    {
+        // https://bitbucket.org/b_c/jose4j/issues/95/
+
+        JwtClaims claims = new JwtClaims();
+        claims.setSubject("me");
+        claims.setExpirationTimeMinutesInTheFuture(5);
+        claims.setAudience("the audience");
+        claims.setIssuer("the issuer");
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setPayload(claims.toJson());
+        jws.setAlgorithmConstraints(AlgorithmConstraints.NO_CONSTRAINTS);
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.NONE);
+        String jwt = jws.getCompactSerialization();
+
+        VerificationKeyResolver exceptionThrowingResolver = new VerificationKeyResolver()
+        {
+            @Override
+            public Key resolveKey(JsonWebSignature jws, List<JsonWebStructure> nestingContext) throws UnresolvableKeyException
+            {
+                throw new UnresolvableKeyException("This VerificationKeyResolver always throws this exception.");
+            }
+        };
+
+        JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                .setExpectedAudience("the audience")
+                .setExpectedIssuer("the issuer")
+                .setRequireExpirationTime()
+                .setVerificationKeyResolver(exceptionThrowingResolver)
+                .setJwsAlgorithmConstraints(AlgorithmConstraints.NO_CONSTRAINTS)
+                .setDisableRequireSignature()
+                .build();
+        // should fail with exception from VerificationKeyResolver
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtConsumer);
+
+        jwtConsumer = new JwtConsumerBuilder()
+                .setExpectedAudience("the audience")
+                .setExpectedIssuer("the issuer")
+                .setRequireExpirationTime()
+                .setVerificationKeyResolver(exceptionThrowingResolver)
+                .setSkipVerificationKeyResolutionOnNone()
+                .setDisableRequireSignature()
+                .build();
+        // should fail with AlgorithmConstraints on 'none'
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtConsumer);
+
+
+        jwtConsumer = new JwtConsumerBuilder()
+                .setExpectedAudience("the audience")
+                .setExpectedIssuer("the issuer")
+                .setRequireExpirationTime()
+                .setVerificationKeyResolver(exceptionThrowingResolver)
+                .setSkipVerificationKeyResolutionOnNone()
+                .setJwsAlgorithmConstraints(AlgorithmConstraints.NO_CONSTRAINTS)
+                .setDisableRequireSignature()
+                .build();
+
+        // should succeed b/c of setSkipVerificationKeyResolutionOnNone and AlgorithmConstraints.NO_CONSTRAINTS
+        JwtContext ctx = jwtConsumer.process(jwt);
+        assertThat(ctx.getJwtClaims().getSubject(), equalTo("me"));
+    }
 }
