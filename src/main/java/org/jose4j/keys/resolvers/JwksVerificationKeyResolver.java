@@ -32,6 +32,7 @@ public class JwksVerificationKeyResolver implements VerificationKeyResolver
 {
     private List<JsonWebKey> jsonWebKeys;
     private VerificationJwkSelector selector = new VerificationJwkSelector();
+    private boolean disambiguateWithVerifySignature;
 
     public JwksVerificationKeyResolver(List<JsonWebKey> jsonWebKeys)
     {
@@ -44,7 +45,14 @@ public class JwksVerificationKeyResolver implements VerificationKeyResolver
         JsonWebKey selected;
         try
         {
-            selected = selector.select(jws, jsonWebKeys);
+            if (disambiguateWithVerifySignature)
+            {
+                selected = selector.selectWithVerifySignatureDisambiguate(jws, jsonWebKeys);
+            }
+            else
+            {
+                selected = selector.select(jws, jsonWebKeys);
+            }
         }
         catch (JoseException e)
         {
@@ -63,5 +71,14 @@ public class JwksVerificationKeyResolver implements VerificationKeyResolver
         }
 
         return selected.getKey();
+    }
+
+    /**
+     * Indicates whether or not to use signature verification to try and disambiguate when the normal key selection based on the JWS headers results in more than one key. Default is false.
+     * @param disambiguateWithVerifySignature boolean indicating whether or not to use signature verification to disambiguate
+     */
+    public void setDisambiguateWithVerifySignature(boolean disambiguateWithVerifySignature)
+    {
+        this.disambiguateWithVerifySignature = disambiguateWithVerifySignature;
     }
 }

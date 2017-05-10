@@ -58,6 +58,31 @@ public class VerificationJwkSelector
         // todo -> if >1, try even harder... maybe. But are there actually realistic cases where this will happen?
     }
 
+    public JsonWebKey selectWithVerifySignatureDisambiguate(JsonWebSignature jws, Collection<JsonWebKey> keys) throws JoseException
+    {
+        List<JsonWebKey> jsonWebKeys = selectList(jws, keys);
+        if (jsonWebKeys.isEmpty())
+        {
+            return null;
+        }
+        else if (jsonWebKeys.size() == 1)
+        {
+            return jsonWebKeys.get(0);
+        }
+        else
+        {
+            for (JsonWebKey jwk : jsonWebKeys)
+            {
+                jws.setKey(jwk.getKey());
+                if (jws.verifySignature())
+                {
+                    return jwk;
+                }
+            }
+        }
+        return null;
+    }
+
     private boolean hasMoreThanOne(List<JsonWebKey> filtered)
     {
         return filtered.size() > 1;

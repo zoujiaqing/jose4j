@@ -151,4 +151,96 @@ public class JwksVerificationKeyResolverUsingJwtConsumerTest
             log.debug("this was expected and is okay: {}", e.toString());
         }
     }
+
+    @Test
+    public void disambiguateWithSignatureCheckOption() throws Exception
+    {
+        String with1stEC = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzNzgwOSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "04tBvYG5QeY8lniGnkZNHMW8b0OPCN6XHuK9g8fsOz8uA_r0Yk-biMkWG7ltOMCFSiiPvEu7jNWfWbk0v-hWOg";
+
+        String with2ndEC = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzNzgwOSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "uIRIFrhftV39qJNOdaL8LwrK1prIJIHsP7Gn6jJAVbE2Mx4IkwGzBXDLKMulM1IvKElmSyK_KBg8afywcxoApA";
+
+        String with3rdEC = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzNzgwOSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "21eYfC_ZNf1FQ1Dtvj4rUiM9jYPgf1zJfeE_b2fclgu36KAN141ICqVjNxQqlK_7Wbct_FDxgyHvej_LEigb2Q";
+
+        String with1stRsa = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzNzgwOSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "aECOQefwSdjN1Sj7LWRBV3m1uuHOFDL02nFxMWifACMELrdYZ2i9W_c6Co0SQoJ5HUE0otA8b2mXQBxJ-azetXT4YiJYBpNbKk_H52KOUWvLoOYNwrTKylWjoTprAQpCr9KQWvjn3xrCoers4N63iCC1D9mKOCrUWFzDy-" +
+                "-inXDj-5VlLWfCUhu8fjx_lotgUYQVD03Rm06P3OWGz5G_oksJ7VpxDDRAYt7zROgmjFDpSWmAtNEKoAlRTeKnZZSN0R71gznBsofs-jJ8zF0QcFOuAfqHVaDWnKwqS0aduZXm0s7rH61e4OwtQdTtFZqCPldUxlfC7uzvLhxgXrdLew";
+
+        String jwsWith2ndRsa = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzNzgwOSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "pgBu9S8g7MC2BN9YNlWD9JhjzWbQVjqpmErW4hMFncKD8bUidIbMBJSI3URXvnMJrLrAC5eB2gb6DccF_txQaqX1X81JbTSdQ44_P1W-1uIIkfIXUvM6OXv48W-CPm8xGuetQ1ayHgU_1ljtdkbdUHZ6irgaeIrFMgZX0J" +
+                "db9Eydnfhwvno2oGk3y6ruq2KgKABIdzgvJXfwdOFGn1z0CxwQSVDkFRLsMsBljTwfTd0v3G8OXT8WRMZMGVyAgtKVu3XJyrPNntVqrzdgQQma6S06Y9J9V9t0AlgEAn2B4TqMxYcu1Tjr7bBL_v83zEXhbdcFBYLfJg-LY5wE6rA-dA";
+
+
+        String withUnknownEC = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzOTEyNywiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "UE4B0IVPRip-3TDKhNAadCuj_Bf5PlEAn9K94Zd7mP25WNZwxDbQpDElZTZSp-3ngPqQyPGj27emYRHhOnFSAQ";
+
+        String with384EC = "eyJhbGciOiJFUzM4NCJ9.eyJzdWIiOiJtZSIsImV4cCI6MTQ5NDQzOTIzMSwiYXVkIjoidGhlIGF1ZGllbmNlIiwiaXNzIjoidGhlIGlzc3VlciJ9." +
+                "NyRtG_eFmMLQ0XkW5kvdSpzYsm6P5M3U8EBFKIhD-jw8E7FOYw9PZ3_o1PWuLWH3XeArZMW7-bAIVxo2bHqJsSUtB6Tf0NWPtCpUF2c1vbuRXEXkGrCUmc4sKyOBjimC";
+
+        String jwksJson =
+                "{\"keys\":[" +
+                        "{\"kty\":\"EC\",\"x\":\"yd4yK8EJWNY-fyB0veOTNqDt_HqpPa45VTSJjIiI8vM\",\"y\":\"UspqZi9nPaUwBY8kD6MPDHslh5f6UMnAiXsg1l3i6UM\",\"crv\":\"P-256\"}," +
+                        "{\"kty\":\"EC\",\"x\":\"3WPq7AnMkQekA1ogYFqNS5NBOXPs68xadKvtsn4pgas\",\"y\":\"CEvQFmGwKv96TQYRrgS-nFl9xWfN8PuLnIwBVmtpfp0\",\"crv\":\"P-256\"}," +
+                        "{\"kty\":\"EC\",\"x\":\"DUYwuVdWtzfd2nkfQ7YEE_3ORRv3o0PYX39qNGVNlyA\",\"y\":\"qxxvewtvj61pnGDS7hWZ026oZehJxtQO3-9oVa6YdT8\",\"crv\":\"P-256\"}," +
+                        "{\"kty\":\"RSA\",\"n\":\"mGOTvaqxy6AlxHXJFqQc5WSfH3Mjso0nlleF4a1ebSMgnqpmK_s6BSP0v9CyKyn_sBNpsH6dlOsks4qwb88SdvoWpMo2ZCIt8YlefirEaT9J8OQycxMv" +
+                        "k7U1t6vCyN8Z68FrwhzzsmnNI_GC723OfMhcEZiRGNRJadPCMPfY3q5PgRrCjUS4v2hQjaicDpZETgbGxWNuNiIPk2CGhG3LJIUX4rx5zrFPQuUKH2Z1zH4E39i3Ab0WBATY0" +
+                        "warvlImI5_rT-uCvvepnaQ6Mc4ImpS3anLNjfPlaNVajl5aRuzzRO77XePN-XzFJUVbC_v1-s2IcJf8uB-PMKAtRqz_kw\",\"e\":\"AQAB\"}," +
+                        "{\"kty\":\"RSA\",\"n\":\"4SoqXJikILVhuwpeOYjbi_KGFXfvMaiBtoDm7nKsVc8ayQ4RBGbQdqHIt6gxSSTHrRSbQ2s5lAHfeyBJ9myQitCwxHFzjIDGcp5_u0wNWJbWUsDnbS-p" +
+                        "wAQsZXZ3m6u_aDEC4sCTjOuotzwJniehVAkm2B1OnoYVhooKt9CTjVj1hwMf8Cpr171Vt559LyzUhRml6Se_AJWG_oFLV2c5ALCi2USfq2G_zoXFt9Kc93LJ9XoPy-hbQXA13" +
+                        "OXwi9YL_BDLk8nd7QfaUgm77-j6RbOYg0l0PTloggw7km7M1D8iDASfkuII-Dzqedcm3KQb0Quo20HkirlIk67E-jOk6Q\",\"e\":\"AQAB\"}]}";
+
+        JsonWebKeySet jwks = new JsonWebKeySet(jwksJson);
+        List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
+
+        JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1494437740))
+                .setExpectedAudience("the audience")
+                .setExpectedIssuer("the issuer")
+                .setVerificationKeyResolver(new JwksVerificationKeyResolver(jsonWebKeys))
+                .build();
+
+        JwtClaims claims = jwtConsumer.processToClaims(with1stEC);     // works b/c first EC p-256 in the list
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        claims = jwtConsumer.processToClaims(with1stRsa);     // works b/c first RSA the list
+        assertThat(claims.getSubject(), equalTo("me"));
+
+
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(with2ndEC, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(with3rdEC, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(withUnknownEC, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(with384EC, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwsWith2ndRsa, jwtConsumer);
+
+        // turn on disambiguate with verify signature and the legit ones will work
+        JwksVerificationKeyResolver resolver  = new JwksVerificationKeyResolver(jsonWebKeys);
+        resolver.setDisambiguateWithVerifySignature(true);
+
+        jwtConsumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1494437740))
+                .setExpectedAudience("the audience")
+                .setExpectedIssuer("the issuer")
+                .setVerificationKeyResolver(resolver)
+                .build();
+
+        claims = jwtConsumer.processToClaims(with1stEC);
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        claims = jwtConsumer.processToClaims(with2ndEC);
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        claims = jwtConsumer.processToClaims(with3rdEC);
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        claims = jwtConsumer.processToClaims(with1stRsa);
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        claims = jwtConsumer.processToClaims(jwsWith2ndRsa);
+        assertThat(claims.getSubject(), equalTo("me"));
+
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(withUnknownEC, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(with384EC, jwtConsumer);
+    }
 }

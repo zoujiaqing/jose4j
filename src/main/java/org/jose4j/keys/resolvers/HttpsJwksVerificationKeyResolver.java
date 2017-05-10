@@ -36,7 +36,11 @@ public class HttpsJwksVerificationKeyResolver implements VerificationKeyResolver
 {
     private static final Logger log = LoggerFactory.getLogger(HttpsJwksVerificationKeyResolver.class);
 
+    private VerificationJwkSelector verificationJwkSelector = new VerificationJwkSelector();
+
     private HttpsJwks httpsJkws;
+
+    private boolean disambiguateWithVerifySignature;
 
     public HttpsJwksVerificationKeyResolver(HttpsJwks httpsJkws)
     {
@@ -52,16 +56,15 @@ public class HttpsJwksVerificationKeyResolver implements VerificationKeyResolver
         try
         {
             jsonWebKeys = httpsJkws.getJsonWebKeys();
-            VerificationJwkSelector verificationJwkSelector = new VerificationJwkSelector();
 
-            theChosenOne = verificationJwkSelector.select(jws, jsonWebKeys);
+            theChosenOne = select(jws, jsonWebKeys);
             if (theChosenOne == null)
             {
                 log.debug("Refreshing JWKs from {} as no suitable verification key for JWS w/ header {} was found in {}", httpsJkws.getLocation(), jws.getHeaders().getFullHeaderAsJsonString(), jsonWebKeys);
 
                 httpsJkws.refresh();
                 jsonWebKeys = httpsJkws.getJsonWebKeys();
-                theChosenOne = verificationJwkSelector.select(jws, jsonWebKeys);
+                theChosenOne = select(jws, jsonWebKeys);
             }
         }
         catch (JoseException | IOException e)
@@ -81,5 +84,26 @@ public class HttpsJwksVerificationKeyResolver implements VerificationKeyResolver
         }
 
         return theChosenOne.getKey();
+    }
+
+    private JsonWebKey select(JsonWebSignature jws, List<JsonWebKey> jsonWebKeys) throws JoseException
+    {
+        if (disambiguateWithVerifySignature)
+        {
+            return verificationJwkSelector.selectWithVerifySignatureDisambiguate(jws, jsonWebKeys);
+        }
+        else
+        {
+            return verificationJwkSelector.select(jws, jsonWebKeys);
+        }
+    }
+
+    /**
+     * Indicates whether or not to use signature verification to try and disambiguate when the normal key selection based on the JWS headers results in more than one key. Default is false.
+     * @param disambiguateWithVerifySignature boolean indicating whether or not to use signature verification to disambiguate
+     */
+    public void setDisambiguateWithVerifySignature(boolean disambiguateWithVerifySignature)
+    {
+        this.disambiguateWithVerifySignature = disambiguateWithVerifySignature;
     }
 }
