@@ -25,6 +25,9 @@ import org.jose4j.lang.JoseException;
  */
 class SelectorSupport
 {
+    private static final String[] VERIFY_OPS = new String[] {KeyOperations.VERIFY};
+    private static final String[] DECRYPT_OPS = new String[] {KeyOperations.DECRYPT, KeyOperations.DERIVE_KEY, KeyOperations.UNWRAP_KEY};
+
     public static SimpleJwkFilter commonFilterForInbound(JsonWebStructure jwx) throws JoseException
     {
         SimpleJwkFilter filter = new SimpleJwkFilter();
@@ -48,8 +51,17 @@ class SelectorSupport
 
         String keyType = jwx.getAlgorithmNoConstraintCheck().getKeyType();
         filter.setKty(keyType);
-        String use = (jwx instanceof JsonWebSignature) ? Use.SIGNATURE : Use.ENCRYPTION;
-        filter.setUse(use, SimpleJwkFilter.OMITTED_OKAY);
+        if (jwx instanceof JsonWebSignature)
+        {
+            filter.setUse(Use.SIGNATURE, SimpleJwkFilter.OMITTED_OKAY);
+            filter.setKeyOperations(VERIFY_OPS, SimpleJwkFilter.OMITTED_OKAY);
+        }
+        else
+        {
+            filter.setUse(Use.ENCRYPTION, SimpleJwkFilter.OMITTED_OKAY);
+            filter.setKeyOperations(DECRYPT_OPS, SimpleJwkFilter.OMITTED_OKAY);
+        }
+
         return filter;
     }
 }

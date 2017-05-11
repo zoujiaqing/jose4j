@@ -35,6 +35,7 @@ public class SimpleJwkFilter
     private Criteria x5t;
     private Criteria x5tS256;
     private boolean allowThumbsFallbackDeriveFromX5c;
+    private KeyOpsCriteria keyOps;
 
     private Criteria crv;
 
@@ -51,6 +52,11 @@ public class SimpleJwkFilter
     public void setUse(String expectedUse, boolean omittedValueAcceptable)
     {
         use = new Criteria(expectedUse, omittedValueAcceptable);
+    }
+
+    public void setKeyOperations(String[] expectedKeyOps, boolean omittedValueAcceptable)
+    {
+        keyOps = new KeyOpsCriteria(expectedKeyOps, omittedValueAcceptable);
     }
 
     public void setAlg(String expectedAlg, boolean omittedValueAcceptable)
@@ -91,6 +97,7 @@ public class SimpleJwkFilter
             match &= isMatch(x5t, thumbs[0]);
             match &= isMatch(x5tS256, thumbs[1]);
             match &= isMatch(crv, getCrv(jwk));
+            match &= keyOps == null || keyOps.meetsCriteria(jwk.getKeyOps());
 
             if (match)
             {
@@ -116,7 +123,6 @@ public class SimpleJwkFilter
             return null;
         }
     }
-
 
     String[] getThumbs(JsonWebKey jwk, boolean allowFallbackDeriveFromX5c)
     {
@@ -159,6 +165,37 @@ public class SimpleJwkFilter
             else
             {
                 return value.equals(this.value);
+            }
+        }
+    }
+
+    private static class KeyOpsCriteria
+    {
+        String[] values;
+        boolean noValueOk;
+
+        private KeyOpsCriteria(String[] values, boolean noValueOk)
+        {
+            this.values = values;
+            this.noValueOk = noValueOk;
+        }
+
+        public boolean meetsCriteria(List<String> values)
+        {
+            if (values == null)
+            {
+                return noValueOk;
+            }
+            else
+            {
+                for (String value : this.values)
+                {
+                    if (values.contains(value))
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
         }
     }

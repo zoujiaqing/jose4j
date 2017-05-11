@@ -1147,4 +1147,54 @@ public class VerificationJwkSelectorTest
         chosen = selector.selectWithVerifySignatureDisambiguate(jwsWith2ndRSA, jsonWebKeys);
         assertThat(chosen.getKey(), equalTo(jwks.getJsonWebKeys().get(4).getKey()));
     }
+
+    @Test
+    public void keyOpsInSelectorKindaRandom() throws Exception
+    {
+        JsonWebKeySet jwks = new JsonWebKeySet("{\"keys\":[" +
+                "{\"kty\":\"EC\",\"key_ops\":[\"verify\",\"nope\",\"whatever\"],\"x\":\"H78v6ZjjJPKmtrQNRECVQiGXFKOYFMHLG0q7SJd__5s\",\"y\":\"7-U3zo9sDyg7BCOoY3Yj_SSZdXuiTJnG1YvjTtqsrfs\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"key_ops\":[\"verify\"],\"x\":\"S0ebOlceQ60hWjm1-Kuj5P3xH1t_NCSMfumBG1ULM5M\",\"y\":\"l3dzIN8mJofWUtQT3jHf-c2jRViXcWam4tfsiyUp6RI\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"key_ops\":[\"deriveBits\",\"unknown\"],\"x\":\"1O1K45F2hApgHgF6M1HCh7352uojDnXxcmiYdJuNBSo\",\"y\":\"MoIl5LLxXIMPfBSUPJXKO8hyv6lCsHgmyc2GWeqi77I\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"uHo8tp88587_RB07P3U2Ev7EZCqhpplFXfrOLyqnVwE\",\"y\":\"y9iW7nGBH_UkuRkn8YuQP8Lc5ftCqkzWDkxzBrof6PU\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"use\":\"enc\",\"x\":\"vt4xF93UAJ733TuKEFN0RymIo5fW_iluEGL5s5cq098\",\"y\":\"AUbaLliBS6XE28Dx_sOO4M_Xc4rJH35ytrw_SRKZhRw\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"x\":\"JgKilKl8qjJ9-3Fnr_l282-Z9N_hxBg54TGs_Gqn9yg\",\"y\":\"wVZH4ova35tsViVLmPY8NbZPnditgKO4JcD2zT6ePpg\",\"crv\":\"P-256\"}]}");
+
+        List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
+
+        VerificationJwkSelector selector = new VerificationJwkSelector();
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256);
+
+        List<JsonWebKey> selected = selector.selectList(jws, jsonWebKeys);
+        assertThat(selected.size(), equalTo(4));
+    }
+
+    @Test
+    public void keyOpsInSelector() throws Exception
+    {
+        JsonWebKeySet jwks = new JsonWebKeySet("{\"keys\":[" +
+                "{\"kty\":\"EC\",\"key_ops\":[\"encrypt\"],\"x\":\"eBTzLIja4bP6Q25Ns5NBfb1PGuT5qVqxtzhK0gmA2wY\",\"y\":\"ToPEAa1KCYkqZ9z0tOt3vzI8vbWXSBVPIau3h68-I9E\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"key_ops\":[\"encrypt\"],\"x\":\"lziTuxjaY7mq4UcPocqLGGxDlz9NWKSmNWbFPQM1JW8KJdlgw7s0t4xbjVBuPh-h\",\"y\":\"bmwU8zrsuM88wIGUod6DgBg-yP0aEdXpbB00cRVpCI1Wd8BnSShz0DNGnu5pl4qN\",\"crv\":\"P-384\"}," +
+                "{\"kty\":\"EC\",\"key_ops\":[\"verify\"],\"x\":\"tZXiftlYcS8qfJvB0ZL7D2QnL2TX5FHwtVzYUn40ZMlqXp-jxb7SowVTrevWTWP-\",\"y\":\"tJG_JYi8dVIa8pusu77OuiW1HXzB-s-q2uf55XXBRu10A2v8xOIO_80ZI7YtPPb4\",\"crv\":\"P-384\"}," +
+                "{\"kty\":\"EC\",\"key_ops\":[\"verify\"],\"x\":\"gfcWFvzU0CrtEImwdjJTgoYKpwcFO5EIykj1Wx8wx_M\",\"y\":\"9ilsfMCVn_FRyy1p20mZRyBuSTHnU1fss_TlbY8qo40\",\"crv\":\"P-256\"}]}\n");
+
+        List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
+
+        VerificationJwkSelector selector = new VerificationJwkSelector();
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256);
+
+        List<JsonWebKey> selected = selector.selectList(jws, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(3).getKey()));
+
+        jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P384_CURVE_AND_SHA384);
+
+        selected = selector.selectList(jws, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(2).getKey()));
+    }
 }
