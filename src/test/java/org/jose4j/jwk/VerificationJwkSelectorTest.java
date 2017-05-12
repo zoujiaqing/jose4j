@@ -1197,4 +1197,32 @@ public class VerificationJwkSelectorTest
         assertThat(selected.size(), equalTo(1));
         assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(2).getKey()));
     }
+
+    @Test
+    public void useInSelector() throws Exception
+    {
+        JsonWebKeySet jwks = new JsonWebKeySet("{\"keys\":[" +
+                "{\"kty\":\"EC\",\"use\":\"enc\",\"x\":\"eBTzLIja4bP6Q25Ns5NBfb1PGuT5qVqxtzhK0gmA2wY\",\"y\":\"ToPEAa1KCYkqZ9z0tOt3vzI8vbWXSBVPIau3h68-I9E\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"EC\",\"use\":\"enc\",\"x\":\"lziTuxjaY7mq4UcPocqLGGxDlz9NWKSmNWbFPQM1JW8KJdlgw7s0t4xbjVBuPh-h\",\"y\":\"bmwU8zrsuM88wIGUod6DgBg-yP0aEdXpbB00cRVpCI1Wd8BnSShz0DNGnu5pl4qN\",\"crv\":\"P-384\"}," +
+                "{\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"tZXiftlYcS8qfJvB0ZL7D2QnL2TX5FHwtVzYUn40ZMlqXp-jxb7SowVTrevWTWP-\",\"y\":\"tJG_JYi8dVIa8pusu77OuiW1HXzB-s-q2uf55XXBRu10A2v8xOIO_80ZI7YtPPb4\",\"crv\":\"P-384\"}," +
+                "{\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"gfcWFvzU0CrtEImwdjJTgoYKpwcFO5EIykj1Wx8wx_M\",\"y\":\"9ilsfMCVn_FRyy1p20mZRyBuSTHnU1fss_TlbY8qo40\",\"crv\":\"P-256\"}]}\n");
+
+        List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
+
+        VerificationJwkSelector selector = new VerificationJwkSelector();
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256);
+
+        List<JsonWebKey> selected = selector.selectList(jws, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(3).getKey()));
+
+        jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P384_CURVE_AND_SHA384);
+
+        selected = selector.selectList(jws, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(2).getKey()));
+    }
 }

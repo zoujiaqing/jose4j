@@ -36,7 +36,7 @@ public class VerificationJwkSelector
 
     public List<JsonWebKey> selectList(JsonWebSignature jws, Collection<JsonWebKey> keys) throws JoseException
     {
-        SimpleJwkFilter filter = SelectorSupport.commonFilterForInbound(jws);
+        SimpleJwkFilter filter = SelectorSupport.filterForInboundSigned(jws);
         List<JsonWebKey> filtered = filter.filter(keys);
 
         if (hasMoreThanOne(filtered))

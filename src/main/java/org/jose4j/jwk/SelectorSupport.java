@@ -15,6 +15,7 @@
 */
 package org.jose4j.jwk;
 
+import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwx.JsonWebStructure;
 import org.jose4j.lang.JoseException;
@@ -28,7 +29,23 @@ class SelectorSupport
     private static final String[] VERIFY_OPS = new String[] {KeyOperations.VERIFY};
     private static final String[] DECRYPT_OPS = new String[] {KeyOperations.DECRYPT, KeyOperations.DERIVE_KEY, KeyOperations.UNWRAP_KEY};
 
-    public static SimpleJwkFilter commonFilterForInbound(JsonWebStructure jwx) throws JoseException
+    public static SimpleJwkFilter filterForInboundSigned(JsonWebSignature jws) throws JoseException
+    {
+        SimpleJwkFilter filter = commonFilterForInbound(jws);
+        filter.setUse(Use.SIGNATURE, SimpleJwkFilter.OMITTED_OKAY);
+        filter.setKeyOperations(VERIFY_OPS, SimpleJwkFilter.OMITTED_OKAY);
+        return filter;
+    }
+
+    public static SimpleJwkFilter filterForInboundEncrypted(JsonWebEncryption jwe) throws JoseException
+    {
+        SimpleJwkFilter filter = commonFilterForInbound(jwe);
+        filter.setUse(Use.ENCRYPTION, SimpleJwkFilter.OMITTED_OKAY);
+        filter.setKeyOperations(DECRYPT_OPS, SimpleJwkFilter.OMITTED_OKAY);
+        return filter;
+    }
+
+    private static SimpleJwkFilter commonFilterForInbound(JsonWebStructure jwx) throws JoseException
     {
         SimpleJwkFilter filter = new SimpleJwkFilter();
         String kid = jwx.getKeyIdHeaderValue();
@@ -51,17 +68,9 @@ class SelectorSupport
 
         String keyType = jwx.getAlgorithmNoConstraintCheck().getKeyType();
         filter.setKty(keyType);
-        if (jwx instanceof JsonWebSignature)
-        {
-            filter.setUse(Use.SIGNATURE, SimpleJwkFilter.OMITTED_OKAY);
-            filter.setKeyOperations(VERIFY_OPS, SimpleJwkFilter.OMITTED_OKAY);
-        }
-        else
-        {
-            filter.setUse(Use.ENCRYPTION, SimpleJwkFilter.OMITTED_OKAY);
-            filter.setKeyOperations(DECRYPT_OPS, SimpleJwkFilter.OMITTED_OKAY);
-        }
 
         return filter;
     }
+
+
 }

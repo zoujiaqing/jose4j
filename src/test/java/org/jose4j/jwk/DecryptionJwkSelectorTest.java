@@ -331,4 +331,49 @@ public class DecryptionJwkSelectorTest
         selected = selector.selectList(jwe, jsonWebKeys);
         assertThat(selected.size(), equalTo(0));
     }
+
+    @Test
+    public void useInSelector() throws Exception
+    {
+        JsonWebKeySet jwks = new JsonWebKeySet("{\"keys\":[" +
+                "{\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"QPd8QUsROHjClFvQENhc-UXaaTBC-s10b50sD2B1WUo\",\"y\":\"bz4xdwK8Edtm9HREbLy7EI9mzg-rUAUVosK5ybFLaRA\",\"crv\":\"P-256\"}," +
+                "{\"kty\":\"RSA\",\"use\":\"sign\",\"n\":\"gxhgbcxZcQ_AHMFuaKJsWNRDh4kKN2CRdMQwhvUyw9brriPomDcGIVSpeq1iiPPd56umWXLF6TgxbVFsqxH7lTh013F8SSYg8pOQ3YYbg-JLJoVWEQZw" +
+                "VsBwzHXvjW4qXyfWMCyBD6p7ta_2LEZjkvVCAVaoTLjK8_1fl3Njj2d-kAzIyKC3mBWajuu51jH2tmCV_CKj7MqShO0Wa7UqNyVtLIiKqApi-be1D_s9dzgPBbAAwJ3qJy4g74Q5cBfVUaJ9QpqKIWYuITuD02Iz" +
+                "SpapckqKeF6vfCuZkS9hwBr4vviY2rTLzVRnVlvKkUek4084qa9arZTF8uLnyiSiVw\",\"e\":\"AQAB\"}," +
+                "{\"kty\":\"RSA\",\"use\":\"enc\",\"n\":\"kGWRVJUV2J6Bg96M37BUIeBj0O16sraxlwZBmeTC4xPKEbOGLgBMfm_7DpwbhpS2jioLp54ldyDqVXmEphWQecnHGCT3uWaAv9CbARpOPOL9FRz" +
+                "uQrYDSMRjoY4S_nlL3nAC8lNros48APoj6XwAQVo-cIcjJSpMNJUSLIE0dNLk9067zxugEG5ljX7IHFe0GpAZWUyb5W3VlQOAEgYoguxgtJIyatfpGTxkpLbEO8lo6OGnJMFrykdUejUTpUY3u_5rAPXLr37M676" +
+                "nblZGxHCB5mgRxGig9EqKEbDbWyuwkHCQspvconhMPGYBB2t6cptTQTt-h8XOCd0nYIK_vw\",\"e\":\"AQAB\"}," +
+                "{\"kty\":\"EC\",\"use\":\"enc\",\"x\":\"E7i5NiWEyw5GPFFtxKjWhT12rqRN7dbtvRAtdmxOoKs\",\"y\":\"y77a93eutsPWgyqKvDpHoN0XbIJ_rGB4DMd9sVF378o\",\"crv\":\"P-256\"}]}");
+
+        List<JsonWebKey> jsonWebKeys = jwks.getJsonWebKeys();
+
+        DecryptionJwkSelector selector = new DecryptionJwkSelector();
+
+        JsonWebEncryption jwe = new JsonWebEncryption();
+        jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW);
+
+        List<JsonWebKey> selected = selector.selectList(jwe, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(3).getKey()));
+
+        jwe = new JsonWebEncryption();
+        jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES);
+
+        selected = selector.selectList(jwe, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(3).getKey()));
+
+        jwe = new JsonWebEncryption();
+        jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+
+        selected = selector.selectList(jwe, jsonWebKeys);
+        assertThat(selected.size(), equalTo(1));
+        assertThat(selected.get(0).getKey(), equalTo(jsonWebKeys.get(2).getKey()));
+
+        jwe = new JsonWebEncryption();
+        jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.DIRECT);
+
+        selected = selector.selectList(jwe, jsonWebKeys);
+        assertThat(selected.size(), equalTo(0));
+    }
 }

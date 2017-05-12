@@ -35,7 +35,7 @@ public class DecryptionJwkSelector
 
     public List<JsonWebKey> selectList(JsonWebEncryption jwe, Collection<JsonWebKey> keys) throws JoseException
     {
-        SimpleJwkFilter filter = SelectorSupport.commonFilterForInbound(jwe);
+        SimpleJwkFilter filter = SelectorSupport.filterForInboundEncrypted(jwe);
         return filter.filter(keys);
     }
 }
