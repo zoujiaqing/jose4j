@@ -113,6 +113,7 @@ public class Headers
     void setEncodedHeader(String encodedHeader) throws JoseException
     {
         this.encodedHeader = encodedHeader;
-        setFullHeaderAsJsonString(base64url.base64UrlDecodeToUtf8String(this.encodedHeader));
+        this.header = base64url.base64UrlDecodeToUtf8String(this.encodedHeader);
+        this.headerMap = JsonUtil.parseJson(header);
     }
 }
