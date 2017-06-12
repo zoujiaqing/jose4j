@@ -29,6 +29,8 @@ public class ByteUtil
 {
     public static final byte[] EMPTY_BYTES = new byte[0];
 
+    private static final int MAX_BYTE_LENGTH = Integer.MAX_VALUE / 8;
+
     public static byte[] convertUnsignedToSignedTwosComp(int[] ints)
     {
         byte[] bytes = new byte[ints.length];
@@ -139,6 +141,11 @@ public class ByteUtil
 
     public static int bitLength(int byteLength)
     {
+        // prevent integer overflow and negative values
+        if (byteLength > MAX_BYTE_LENGTH || (byteLength < 0))
+        {
+            throw new UncheckedJoseException("Invalid byte length ("+byteLength+") for converting to bit length");
+        }
         return byteLength * 8;
     }
 
