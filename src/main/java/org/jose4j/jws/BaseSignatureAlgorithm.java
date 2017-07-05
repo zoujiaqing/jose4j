@@ -22,6 +22,8 @@ import org.jose4j.keys.KeyPersuasion;
 import org.jose4j.lang.ExceptionHelp;
 import org.jose4j.lang.InvalidKeyException;
 import org.jose4j.lang.JoseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.*;
 import java.security.spec.AlgorithmParameterSpec;
@@ -30,6 +32,8 @@ import java.security.spec.AlgorithmParameterSpec;
  */
 public abstract class BaseSignatureAlgorithm extends AlgorithmInfo implements JsonWebSignatureAlgorithm
 {
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
+
     private AlgorithmParameterSpec algorithmParameterSpec;
 
     public BaseSignatureAlgorithm(String id, String javaAlgo, String keyAlgo)
@@ -57,7 +61,8 @@ public abstract class BaseSignatureAlgorithm extends AlgorithmInfo implements Js
         }
         catch (SignatureException e)
         {
-            throw new JoseException("Problem verifying signature.", e);
+            if (log.isDebugEnabled()) {log.debug("Problem verifying signature: " + e);}
+            return false;
         }
     }
 
