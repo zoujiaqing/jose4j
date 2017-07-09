@@ -51,7 +51,7 @@ public class EcdsaUsingShaTest extends TestCase
         PublicKey pub1 = keyPair1.getPublic();
         PrivateKey priv2 = keyPair2.getPrivate();
         PublicKey pub2 = keyPair2.getPublic();
-        JwsTestSupport.testBasicRoundTrip("The umlaut ( /??mla?t/ uum-lowt) refers to a sound shift.", algo, priv1, pub1, priv2, pub2);
+        JwsTestSupport.testBasicRoundTrip("The umlaut (/\u02C8\u028Amla\u028At/ UUM-lowt) refers to a sound shift.", algo, priv1, pub1, priv2, pub2);
     }
 
     public void testP521RoundTripGenKeys() throws JoseException
@@ -85,7 +85,7 @@ public class EcdsaUsingShaTest extends TestCase
         KeyPair keyPair = keyUtil.generateKeyPair(EllipticCurves.P521);
         PrivateKey priv2 = keyPair.getPrivate();
         PublicKey pub2 = keyPair.getPublic();
-        JwsTestSupport.testBasicRoundTrip("touch�", algo, priv1, pub1, priv2, pub2);
+        JwsTestSupport.testBasicRoundTrip("touch\u00df", algo, priv1, pub1, priv2, pub2);
     }
 
     public void testBadKeys() throws JoseException

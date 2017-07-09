@@ -16,7 +16,6 @@
 
 package org.jose4j.jws;
 
-import org.jose4j.jwa.Algorithm;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwa.AlgorithmFactory;
 import org.jose4j.jwa.AlgorithmFactoryFactory;
@@ -32,12 +31,14 @@ import org.jose4j.lang.StringUtil;
 import java.security.Key;
 
 /**
+ * The JsonWebSignature class is used to produce and consume JSON Web Signature (JWS) as defined in
+ * RFC 7515.
  */
 public class JsonWebSignature extends JsonWebStructure
 {
     public static final short COMPACT_SERIALIZATION_PARTS = 3;
 
-    private String payload;
+    private byte[] payloadBytes;
     private String payloadCharEncoding = StringUtil.UTF_8;
     private String encodedPayload;
 
@@ -51,9 +52,50 @@ public class JsonWebSignature extends JsonWebStructure
         }
     }
 
+    /**
+     * Sets the JWS payload as a string.
+     * Use {@link #setPayloadCharEncoding(String)} before calling this method, to use a character
+     * encoding other than UTF-8.
+     * @param payload the payload, as a string, to be singed.
+     */
     public void setPayload(String payload)
     {
-        this.payload = payload;
+        this.payloadBytes = StringUtil.getBytesUnchecked(payload, payloadCharEncoding);
+    }
+
+    /**
+     * Get the JWS payload.
+     * @return the sequence of bytes that make up the JWS payload.
+     * @throws JoseException if the JWS signature is invalid or an error condition is encountered during the signature verification process
+     */
+    public byte[] getPayloadBytes() throws JoseException
+    {
+        if (!verifySignature())
+        {
+            throw new IntegrityException("JWS signature is invalid.");
+        }
+
+        return payloadBytes;
+    }
+
+    /**
+     * Get the JWS payload. Unlike {@link #getPayloadBytes()} the signature is not
+     * verified when calling this method.
+     * @return the sequence of bytes that make up the JWS payload.
+     */
+    public byte[] getUnverifiedPayloadBytes()
+    {
+        return payloadBytes;
+    }
+
+
+    /**
+     * Sets the JWS payload.
+     * @param payloadBytes the payload, as a byte array, to be singed
+     */
+    public void setPayloadBytes(byte[] payloadBytes)
+    {
+        this.payloadBytes = payloadBytes;
     }
 
     protected void setCompactSerializationParts(String[] parts) throws JoseException
@@ -68,7 +110,21 @@ public class JsonWebSignature extends JsonWebStructure
         setSignature(base64url.base64UrlDecode(parts[2]));
     }
 
-
+    /**
+     * <p>
+     * Sign and produce the JWS Compact Serialization.
+     * </p>
+     * <p>
+     * The JWS Compact Serialization represents digitally signed or MACed
+     * content as a compact, URL-safe string.  This string is:
+     * <p>
+     * BASE64URL(UTF8(JWS Protected Header)) || '.' ||
+     * BASE64URL(JWS Payload) || '.' ||
+     * BASE64URL(JWS Signature)
+     * </p>
+     * @return the Compact Serialization: the encoded header + "." + the encoded payload + "." + the encoded signature
+     * @throws JoseException
+     */
     public String getCompactSerialization() throws JoseException
     {
         this.sign();
@@ -90,6 +146,10 @@ public class JsonWebSignature extends JsonWebStructure
         return CompactSerializer.serialize(getEncodedHeader(), "", getEncodedSignature());
     }
 
+    /**
+     * Compute the JWS signature.
+     * @throws JoseException if an error condition is encountered during the signing process
+     */
     public void sign() throws JoseException
     {
         JsonWebSignatureAlgorithm algorithm = getAlgorithm();
@@ -109,6 +169,11 @@ public class JsonWebSignature extends JsonWebStructure
         validSignature = null;
     }
 
+    /**
+     * Verify the signature of the JWS.
+     * @return true if the signature is valid, false otherwise
+     * @throws JoseException if an error condition is encountered during the signature verification process
+     */
     public boolean verifySignature() throws JoseException
     {
         JsonWebSignatureAlgorithm algorithm = getAlgorithm();
@@ -169,25 +234,54 @@ public class JsonWebSignature extends JsonWebStructure
         return CompactSerializer.serialize(getEncodedHeader(), getEncodedPayload());
     }
 
+    /**
+     * Gets the JWS payload as a string.
+     * Use {@link #setPayloadCharEncoding(String)} before calling this method, to use a character
+     * encoding other than UTF-8.
+     * @return the JWS payload
+     * @throws JoseException if the JWS signature is invalid or an error condition is encountered during the signature verification process
+     */
     public String getPayload() throws JoseException
     {
         if (!Boolean.getBoolean("org.jose4j.jws.getPayload-skip-verify") && !verifySignature())
         {
             throw new IntegrityException("JWS signature is invalid.");
         }
-        return payload;
+        return getStringPayload();
     }
 
+    /**
+     * Gets the JWS payload as a string. Unlike {@link #getPayload()} the signature is not
+     * verified when calling this method.
+     * Use {@link #setPayloadCharEncoding(String)} before calling this method, to use a character
+     * encoding other than UTF-8.
+     */
     public String getUnverifiedPayload()
     {
-        return payload;
+        return getStringPayload();
     }
 
+    private String getStringPayload()
+    {
+        return StringUtil.newString(payloadBytes, payloadCharEncoding);
+    }
+
+    /**
+     * Gets the character encoding used for the string representation of the JWS payload.
+     * The default encoding is UTF-8.
+     * @return the character encoding
+     */
     public String getPayloadCharEncoding()
     {
         return payloadCharEncoding;
     }
 
+    /**
+     * Sets the character encoding used for the string representation of the JWS payload (i.e.
+     * when using {@link #getPayload()}, {@link #getUnverifiedPayload()}, or {@link #setPayload(String)}).
+     * The default encoding is UTF-8.
+     * @param payloadCharEncoding the character encoding to use for the string representation of the JWS payload
+     */
     public void setPayloadCharEncoding(String payloadCharEncoding)
     {
         this.payloadCharEncoding = payloadCharEncoding;
@@ -206,12 +300,16 @@ public class JsonWebSignature extends JsonWebStructure
     public void setEncodedPayload(String encodedPayload)
     {
         this.encodedPayload = encodedPayload;
-        setPayload(base64url.base64UrlDecodeToString(encodedPayload, payloadCharEncoding));
+        this.payloadBytes = base64url.base64UrlDecode(encodedPayload);
     }
 
+    /**
+     * Gets the base64url encoded JWS Payload.
+     * @return the base64url encoded JWS Payload.
+     */
     public String getEncodedPayload()
     {
-        return (encodedPayload != null) ? encodedPayload : base64url.base64UrlEncode(payload, getPayloadCharEncoding());
+        return (encodedPayload != null) ? encodedPayload : base64url.base64UrlEncode(payloadBytes);
     }
 
     public String getEncodedSignature()
