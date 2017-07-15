@@ -120,5 +120,6 @@ public class JwsPayloadVariationsTest
         jws.setPayloadCharEncoding("ISO8859_15");
         Assert.assertTrue(jws.verifySignature());
         Assert.assertThat("€Ÿ", equalTo(jws.getPayload()));
+        Assert.assertThat("ISO8859_15", equalTo(jws.getPayloadCharEncoding()));
     }
 }

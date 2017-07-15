@@ -2,13 +2,17 @@ package org.jose4j.jws;
 
 import org.jose4j.base64url.Base64Url;
 import org.jose4j.jca.ProviderContext;
+import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwk.JsonWebKey;
+import org.jose4j.jwx.HeaderParameterNames;
 import org.jose4j.lang.StringUtil;
 import org.junit.Test;
 
 import java.security.Key;
+import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -17,6 +21,56 @@ import static org.junit.Assert.assertTrue;
  */
 public class JwsUnencodedPayloadOptionTest
 {
+    @Test
+    public void rfc7797Examples() throws Exception
+    {
+        // the key and payload are from https://tools.ietf.org/html/rfc7797#section-4
+        String payload = "$.02";
+
+        JsonWebKey jwk = JsonWebKey.Factory.newJwk(
+                "   {\n" +
+                "      \"kty\":\"oct\",\n" +
+                "      \"k\":\"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75\n" +
+                "           aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow\"\n" +
+                "   }\n");
+
+        // Test the "control" JWS from https://tools.ietf.org/html/rfc7797#section-4.1
+        String controlCompactSerialization = "eyJhbGciOiJIUzI1NiJ9.JC4wMg.5mvfOroL-g7HyqJoozehmsaqmvTYGEq5jTI1gVvoEoQ";
+        JsonWebSignature controlJws = new JsonWebSignature();
+        controlJws.setCompactSerialization(controlCompactSerialization);
+        controlJws.setKey(jwk.getKey());
+        controlJws.setPayloadCharEncoding(StringUtil.US_ASCII);
+        assertTrue(controlJws.verifySignature());
+        assertThat(payload, equalTo(controlJws.getPayload()));
+
+
+        // Test verifying the example with unencoded and detached payload from https://tools.ietf.org/html/rfc7797#section-4.2
+        String detachedUnencoded = "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY";
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, AlgorithmIdentifiers.HMAC_SHA256));
+        jws.setPayloadCharEncoding(StringUtil.US_ASCII);
+        jws.setCompactSerialization(detachedUnencoded);
+        jws.setKey(jwk.getKey());
+        jws.setPayload(payload);
+        assertTrue(jws.verifySignature());
+        assertThat(payload, equalTo(controlJws.getPayload()));
+
+        // reconstruct the example with unencoded and detached payload from https://tools.ietf.org/html/rfc7797#section-4.2
+        // the header just works out being the same based on (a little luck and) setting headers order and how the JSON is produced
+        jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+        jws.getHeaders().setObjectHeaderValue(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD, false);
+        jws.setCriticalHeaderNames(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD);
+        jws.setPayloadCharEncoding(StringUtil.US_ASCII);
+        jws.setKey(jwk.getKey());
+        jws.setPayload(payload);
+        String detachedContentCompactSerialization = jws.getDetachedContentCompactSerialization();
+        assertThat(detachedUnencoded, equalTo(detachedContentCompactSerialization));
+        assertThat(payload, equalTo(controlJws.getPayload()));
+    }
+
+
     @Test
     public void testExamplesFromDraftEvenWithoutDirectSupportForTheHeader() throws Exception
     {

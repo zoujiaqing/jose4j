@@ -28,6 +28,8 @@ import org.jose4j.lang.InvalidAlgorithmException;
 import org.jose4j.lang.JoseException;
 import org.jose4j.lang.StringUtil;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.Key;
 
 /**
@@ -128,7 +130,7 @@ public class JsonWebSignature extends JsonWebStructure
     public String getCompactSerialization() throws JoseException
     {
         this.sign();
-        return CompactSerializer.serialize(getSigningInput(), getEncodedSignature());
+        return CompactSerializer.serialize(getEncodedHeader(), getEncodedPayload(), getEncodedSignature());
     }
 
     /**
@@ -194,6 +196,12 @@ public class JsonWebSignature extends JsonWebStructure
     }
 
     @Override
+    protected boolean isSupportedCriticalHeader(String headerName)
+    {
+        return HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD.equals(headerName);
+    }
+
+    @Override
     public JsonWebSignatureAlgorithm getAlgorithm() throws InvalidAlgorithmException
     {
         return getAlgorithm(true);
@@ -223,16 +231,50 @@ public class JsonWebSignature extends JsonWebStructure
         return jwsAlgorithmFactory.getAlgorithm(algo);
     }
 
+
     private byte[] getSigningInputBytes() throws JoseException
     {
-        String signingInput = getSigningInput();
-        return StringUtil.getBytesAscii(signingInput);
+        /*
+           https://tools.ietf.org/html/rfc7797#section-3
+           +-------+-----------------------------------------------------------+
+           | "b64" | JWS Signing Input Formula                                 |
+           +-------+-----------------------------------------------------------+
+           | true  | ASCII(BASE64URL(UTF8(JWS Protected Header)) || '.' ||     |
+           |       | BASE64URL(JWS Payload))                                   |
+           |       |                                                           |
+           | false | ASCII(BASE64URL(UTF8(JWS Protected Header)) || '.') ||    |
+           |       | JWS Payload                                               |
+           +-------+-----------------------------------------------------------+
+        */
+
+        if (!isRfc7797UnencodedPayload())
+        {
+            String signingInputString = CompactSerializer.serialize(getEncodedHeader(), getEncodedPayload());
+            return StringUtil.getBytesAscii(signingInputString);
+        }
+        else
+        {
+            try
+            {
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                os.write(StringUtil.getBytesAscii(getEncodedHeader()));
+                os.write(0x2e); // ascii for "."
+                os.write(payloadBytes);
+                return os.toByteArray();
+            }
+            catch (IOException e)
+            {
+                throw new JoseException("This should never happen from a ByteArrayOutputStream", e);
+            }
+        }
     }
 
-    private String getSigningInput() throws JoseException
+    protected boolean isRfc7797UnencodedPayload()
     {
-        return CompactSerializer.serialize(getEncodedHeader(), getEncodedPayload());
+        Object b64 = headers.getObjectHeaderValue(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD);
+        return (b64 != null && b64 instanceof Boolean && !(Boolean)b64);
     }
+
 
     /**
      * Gets the JWS payload as a string.

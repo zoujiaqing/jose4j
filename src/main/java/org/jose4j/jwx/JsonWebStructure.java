@@ -287,7 +287,7 @@ public abstract class JsonWebStructure
             {
                 for (String criticalHeader : (List<String>) criticalHeaderObjectValue)
                 {
-                    if (!knownCriticalHeaders.contains(criticalHeader))
+                    if (!knownCriticalHeaders.contains(criticalHeader) && !isSupportedCriticalHeader(criticalHeader))
                     {
                         throw new JoseException("Unrecognized header '" + criticalHeader + "' marked as critical.");
                     }
@@ -300,6 +300,10 @@ public abstract class JsonWebStructure
         }
     }
 
+    protected boolean isSupportedCriticalHeader(String headerName)
+    {
+        return false;
+    }
 
     protected ProviderContext getProviderCtx()
     {

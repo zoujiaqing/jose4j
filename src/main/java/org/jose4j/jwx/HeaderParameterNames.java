@@ -52,4 +52,15 @@ public class HeaderParameterNames
     public static final String AUTHENTICATION_TAG = "tag";
 
     public static final String CRITICAL = "crit";
+
+
+    /**
+     * As defined in RFC 7797, the "b64" (base64url-encode payload) Header Parameter determines
+     * whether the payload is represented in the JWS and the JWS Signing
+     * Input as ASCII(BASE64URL(JWS Payload)) or as the JWS Payload value
+     * itself with no encoding performed.
+     *
+     * https://tools.ietf.org/html/rfc7797
+     */
+    public static final String BASE64URL_ENCODE_PAYLOAD = "b64";
 }
