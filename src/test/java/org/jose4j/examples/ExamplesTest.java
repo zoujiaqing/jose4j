@@ -668,6 +668,13 @@ System.out.println("Payload: " + jwe.getPayload());
 @Test
 public void RFC7797JwsUnencodedPayloadOption() throws Exception
 {
+    //
+    // An example of signature application and verification using the
+    // RFC 7797 JSON Web Signature (JWS) Unencoded Payload Option with
+    // the "b64" header set to false indicating that the payload is not
+    // base64url encoded when calculating the signature
+    //
+
     // The public/private key pair for this example as a JWK
     PublicJsonWebKey jwk = PublicJsonWebKey.Factory.newPublicJwk("{" +
             "  \"kty\": \"EC\"," +
