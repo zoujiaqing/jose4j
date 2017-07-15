@@ -9,7 +9,6 @@ import org.jose4j.lang.StringUtil;
 import org.junit.Test;
 
 import java.security.Key;
-import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.*;
