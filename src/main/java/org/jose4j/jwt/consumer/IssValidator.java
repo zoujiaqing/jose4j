@@ -25,7 +25,7 @@ import java.util.Set;
 /**
  *
  */
-public class IssValidator implements Validator
+public class IssValidator implements ErrorCodeValidator
 {
     private Set<String> expectedIssuers;
     private boolean requireIssuer;
@@ -50,18 +50,18 @@ public class IssValidator implements Validator
     }
 
     @Override
-    public String validate(JwtContext jwtContext) throws MalformedClaimException
+    public Error validate(JwtContext jwtContext) throws MalformedClaimException
     {
         String issuer = jwtContext.getJwtClaims().getIssuer();
 
         if (issuer == null)
         {
-            return requireIssuer ? "No Issuer (iss) claim present but was expecting " + expectedValue() : null;
+            return requireIssuer ? new Error(ErrorCodes.ISSUER_MISSING, "No Issuer (iss) claim present but was expecting " + expectedValue()) : null;
         }
 
         if (expectedIssuers != null && !expectedIssuers.contains(issuer))
         {
-            return "Issuer (iss) claim value (" + issuer + ") doesn't match expected value of " + expectedValue();
+            return new Error(ErrorCodes.ISSUER_INVALID, "Issuer (iss) claim value (" + issuer + ") doesn't match expected value of " + expectedValue());
         }
 
         return null;

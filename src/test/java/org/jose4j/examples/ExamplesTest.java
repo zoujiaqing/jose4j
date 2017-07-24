@@ -41,6 +41,7 @@ import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
+import org.jose4j.jwt.consumer.ErrorCodes;
 import org.jose4j.jwt.consumer.InvalidJwtException;
 import org.jose4j.jwt.consumer.JwtConsumer;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
@@ -188,6 +189,21 @@ public void nestedJwtRoundTripExample() throws JoseException, InvalidJwtExceptio
         // InvalidJwtException will be thrown, if the JWT failed processing or validation in anyway.
         // Hopefully with meaningful explanations(s) about what went wrong.
         System.out.println("Invalid JWT! " + e);
+
+        // Programmatic access to (some) specific reasons for JWT invalidity is also possible
+        // should you want different error handling behavior for certain conditions.
+
+        // Whether or not the JWT has expired being one common reason for invalidity
+        if (e.hasExpired())
+        {
+            System.out.println("JWT expired at " + e.getJwtContext().getJwtClaims().getExpirationTime());
+        }
+
+        // Or maybe the audience was invalid
+        if (e.hasErrorCode(ErrorCodes.AUDIENCE_INVALID))
+        {
+            System.out.println("JWT had wrong audience: " + e.getJwtContext().getJwtClaims().getAudience());
+        }
     }
 
 }

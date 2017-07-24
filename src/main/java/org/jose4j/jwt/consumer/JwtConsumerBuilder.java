@@ -82,7 +82,7 @@ public class JwtConsumerBuilder
     private boolean requireJti;
     private NumericDateValidator dateClaimsValidator = new NumericDateValidator();
 
-    private List<Validator> customValidators = new ArrayList<>();
+    private List<ErrorCodeValidator> customValidators = new ArrayList<>();
 
     private boolean requireSignature = true;
     private boolean requireEncryption;
@@ -541,6 +541,19 @@ public class JwtConsumerBuilder
      */
     public JwtConsumerBuilder registerValidator(Validator validator)
     {
+        customValidators.add(new ErrorCodeValidatorAdapter(validator));
+        return this;
+    }
+
+    /**
+     * Custom ErrorCodeValidator implementations, which will be invoked when the {@code JwtConsumer} is validating the JWT claims.
+     * Error codes can be used for programmatic access to specific reasons for JWT invalidity
+     * by using {@link InvalidJwtException#hasErrorCode(int)}.
+     * @param validator the validator
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder registerValidator(ErrorCodeValidator validator)
+    {
         customValidators.add(validator);
         return this;
     }
@@ -613,7 +626,7 @@ public class JwtConsumerBuilder
      */
     public JwtConsumer build()
     {
-        List<Validator> validators = new ArrayList<>();
+        List<ErrorCodeValidator> validators = new ArrayList<>();
         if (!skipAllValidators)
         {
             if (!skipAllDefaultValidators)

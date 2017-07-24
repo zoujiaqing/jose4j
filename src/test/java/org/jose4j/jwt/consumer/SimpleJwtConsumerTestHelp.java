@@ -30,14 +30,17 @@ public class SimpleJwtConsumerTestHelp
 {
     private static final Logger log = LoggerFactory.getLogger(SimpleJwtConsumerTestHelp.class);
 
-    public static void expectProcessingFailure(String jwt, JwtConsumer jwtConsumer)
+    public static InvalidJwtException expectProcessingFailure(String jwt, JwtConsumer jwtConsumer)
     {
-        expectProcessingFailure(jwt, null, jwtConsumer);
+        return expectProcessingFailure(jwt, null, jwtConsumer);
     }
 
 
-    static void expectProcessingFailure(String jwt, JwtContext jwtContext, JwtConsumer jwtConsumer)
+    static InvalidJwtException expectProcessingFailure(String jwt, JwtContext jwtContext, JwtConsumer jwtConsumer)
     {
+
+        InvalidJwtException ije = null;
+
         try
         {
             jwtConsumer.process(jwt);
@@ -45,6 +48,7 @@ public class SimpleJwtConsumerTestHelp
         }
         catch (InvalidJwtException e)
         {
+            ije = e;
             log.debug("Expected exception: {}", e.toString());
         }
 
@@ -57,9 +61,12 @@ public class SimpleJwtConsumerTestHelp
             }
             catch (InvalidJwtException e)
             {
+                ije = e;
                 log.debug("Expected exception: {}", e.toString());
             }
         }
+
+        return ije;
     }
 
     static void goodValidate(JwtClaims jwtClaims, JwtConsumer jwtConsumer) throws InvalidJwtException

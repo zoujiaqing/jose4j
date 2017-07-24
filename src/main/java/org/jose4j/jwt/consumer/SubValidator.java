@@ -22,8 +22,10 @@ import org.jose4j.jwt.MalformedClaimException;
 /**
  *
  */
-public class SubValidator implements Validator
+public class SubValidator implements ErrorCodeValidator
 {
+    private static final Error MISSING_SUB = new Error(ErrorCodes.SUBJECT_MISSING, "No Subject (sub) claim is present.");
+
     private boolean requireSubject;
     private String expectedSubject;
 
@@ -39,17 +41,18 @@ public class SubValidator implements Validator
     }
 
     @Override
-    public String validate(JwtContext jwtContext) throws MalformedClaimException
+    public Error validate(JwtContext jwtContext) throws MalformedClaimException
     {
         JwtClaims jwtClaims = jwtContext.getJwtClaims();
         String subject = jwtClaims.getSubject();
         if (subject == null && requireSubject)
         {
-            return "No Subject (sub) claim is present.";
+            return MISSING_SUB;
         }
         else if (expectedSubject != null && !expectedSubject.equals(subject))
         {
-            return "Subject (sub) claim value (" + subject + ") doesn't match expected value of " + expectedSubject;
+            String msg = "Subject (sub) claim value (" + subject + ") doesn't match expected value of " + expectedSubject;
+            return new Error(ErrorCodes.SUBJECT_INVALID, msg);
         }
 
         return null;

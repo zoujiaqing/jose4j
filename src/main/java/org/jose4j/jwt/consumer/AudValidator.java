@@ -25,8 +25,10 @@ import java.util.Set;
 /**
  * Validate the "aud" (Audience) Claim per http://tools.ietf.org/html/rfc7519#section-4.1.3
  */
-public class AudValidator implements Validator
+public class AudValidator implements ErrorCodeValidator
 {
+    private static final Error MISSING_AUD = new Error(ErrorCodes.AUDIENCE_MISSING, "No Audience (aud) claim present.");
+
     private Set<String> acceptableAudiences;
     private boolean requireAudience;
 
@@ -37,13 +39,13 @@ public class AudValidator implements Validator
     }
 
     @Override
-    public String validate(JwtContext jwtContext) throws MalformedClaimException
+    public Error validate(JwtContext jwtContext) throws MalformedClaimException
     {
         final JwtClaims jwtClaims = jwtContext.getJwtClaims();
 
         if (!jwtClaims.hasAudience())
         {
-            return requireAudience ? "No Audience (aud) claim present." : null;
+            return requireAudience ? MISSING_AUD : null;
         }
 
         List<String> audiences = jwtClaims.getAudience();
@@ -80,7 +82,7 @@ public class AudValidator implements Validator
             }
             sb.append(" as an aud value.");
 
-            return sb.toString();
+            return new Error(ErrorCodes.AUDIENCE_INVALID, sb.toString());
         }
 
         return null;

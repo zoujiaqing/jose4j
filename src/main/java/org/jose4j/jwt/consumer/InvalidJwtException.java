@@ -20,25 +20,85 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- *
+ * An exception thrown when a JWT is considered invalid or otherwise cannot be
+ * processed/consumed.
  */
 public class InvalidJwtException extends Exception
 {
-    private List<String> details = Collections.emptyList();
+    private List<ErrorCodeValidator.Error> details = Collections.emptyList();
+    private JwtContext jwtContext;
 
-    public InvalidJwtException(String message)
+    public InvalidJwtException(String message, List<ErrorCodeValidator.Error> details, JwtContext jwtContext)
     {
         super(message);
+        this.details = details;
+        this.jwtContext = jwtContext;
     }
 
-    public InvalidJwtException(String message, Throwable cause)
+    public InvalidJwtException(String message, ErrorCodeValidator.Error detail, Throwable cause, JwtContext jwtContext)
     {
         super(message, cause);
+        this.jwtContext = jwtContext;
+        details = Collections.singletonList(detail);
     }
 
-    public void setDetails(List<String> details)
+    /**
+     * <p>
+     * Provides programmatic access to (some) specific reasons for JWT invalidity
+     * by indicating if the given error code was one of the reasons for the
+     * JWT being considered invalid.
+     * </p>
+     * <p>
+     * Error codes used by this library are defined in {@link ErrorCodes}.
+     * </p>
+     * @param code the given error code
+     * @return true if the given error code was one of the reasons for the JWT being invalid and false otherwise
+     */
+    public boolean hasErrorCode(int code)
     {
-        this.details = details;
+        for (ErrorCodeValidator.Error error : details)
+        {
+            if (code == error.getErrorCode())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Indicates if the JWT was invalid because it had expired
+     * (i.e. the expiration time "exp" claim identified a time in the past).
+     * This is equivalent to calling
+     * <code>hasErrorCode(ErrorCodes.EXPIRED)</code>
+     * @return true if expiration is one of the reasons for the JWT being invalid and false otherwise
+     */
+    public boolean hasExpired()
+    {
+        return hasErrorCode(ErrorCodes.EXPIRED);
+    }
+
+    /**
+     * Returns a list of reasons the JWT was considered invalid.
+     * @return the list of error reasons/details
+     */
+    public List<ErrorCodeValidator.Error> getErrorDetails()
+    {
+        return details;
+    }
+
+    /**
+     * Returns a <code>JwtContext</code> object including the <code>JwtClaims<code/>
+     * representing the JWT processed
+     * up to the point of this <code>InvalidJwtException</code> being thrown.
+     * Some care should be taken when using this because, depending on what kind
+     * of error was encountered in processing the JWT and
+     * when it was encountered, the <code>JwtContext</code> may not be complete.
+     * @return the the <code>JwtContext</code>
+     */
+    public JwtContext getJwtContext()
+    {
+        return jwtContext;
     }
 
     @Override

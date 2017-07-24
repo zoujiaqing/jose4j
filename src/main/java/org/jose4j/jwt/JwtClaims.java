@@ -18,7 +18,10 @@ package org.jose4j.jwt;
 
 import org.jose4j.base64url.Base64Url;
 import org.jose4j.json.JsonUtil;
+import org.jose4j.jwt.consumer.ErrorCodeValidator;
+import org.jose4j.jwt.consumer.ErrorCodes;
 import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.JwtContext;
 import org.jose4j.lang.ByteUtil;
 import org.jose4j.lang.JoseException;
 
@@ -37,7 +40,7 @@ public class JwtClaims
         claimsMap = new LinkedHashMap<>();
     }
 
-    private JwtClaims(String jsonClaims) throws InvalidJwtException
+    private JwtClaims(String jsonClaims, JwtContext jwtContext) throws InvalidJwtException
     {
         rawJson = jsonClaims;
         try
@@ -47,13 +50,20 @@ public class JwtClaims
         }
         catch (JoseException e)
         {
-            throw new InvalidJwtException("Unable to parse JWT Claim Set JSON: " + jsonClaims, e);
+            String msg = "Unable to parse what was expected to be the JWT Claim Set JSON: \"" + jsonClaims + "\"";
+            ErrorCodeValidator.Error error = new ErrorCodeValidator.Error(ErrorCodes.JSON_INVALID, "Invalid JSON.");
+            throw new InvalidJwtException(msg, error, e, jwtContext);
         }
+    }
+
+    public static JwtClaims parse(String jsonClaims, JwtContext jwtContext) throws InvalidJwtException
+    {
+        return new JwtClaims(jsonClaims, jwtContext);
     }
 
     public static JwtClaims parse(String jsonClaims) throws InvalidJwtException
     {
-        return new JwtClaims(jsonClaims);
+        return new JwtClaims(jsonClaims, null);
     }
 
     public String getIssuer() throws MalformedClaimException

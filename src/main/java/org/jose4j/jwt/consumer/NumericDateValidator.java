@@ -23,8 +23,12 @@ import org.jose4j.jwt.NumericDate;
 /**
  *
  */
-public class NumericDateValidator implements Validator
+public class NumericDateValidator implements ErrorCodeValidator
 {
+    private static final Error MISSING_EXP = new Error(ErrorCodes.EXPIRATION_MISSING, "No Expiration Time (exp) claim present.");
+    private static final Error MISSING_IAT = new Error(ErrorCodes.ISSUED_AT_MISSING, "No Issued At (iat) claim present.");
+    private static final Error MISSING_NBF = new Error(ErrorCodes.NOT_BEFORE_MISSING, "No Not Before (nbf) claim present.");
+
     private boolean requireExp;
     private boolean requireIat;
     private boolean requireNbf;
@@ -63,7 +67,7 @@ public class NumericDateValidator implements Validator
     }
 
     @Override
-    public String validate(JwtContext jwtContext) throws MalformedClaimException
+    public Error validate(JwtContext jwtContext) throws MalformedClaimException
     {
         JwtClaims jwtClaims = jwtContext.getJwtClaims();
         NumericDate expirationTime = jwtClaims.getExpirationTime();
@@ -72,17 +76,17 @@ public class NumericDateValidator implements Validator
 
         if (requireExp && expirationTime == null)
         {
-            return "No Expiration Time (exp) claim present.";
+            return MISSING_EXP;
         }
 
         if (requireIat && issuedAt == null)
         {
-            return "No Issued At (iat) claim present.";
+            return MISSING_IAT;
         }
 
         if (requireNbf && notBefore == null)
         {
-            return "No Not Before (nbf) claim present.";
+            return MISSING_NBF;
         }
 
         NumericDate evaluationTime = (staticEvaluationTime == null) ? NumericDate.now() : staticEvaluationTime;
@@ -91,17 +95,18 @@ public class NumericDateValidator implements Validator
         {
             if ((evaluationTime.getValue() - allowedClockSkewSeconds) >= expirationTime.getValue())
             {
-                return "The JWT is no longer valid - the evaluation time " + evaluationTime + " is on or after the Expiration Time (exp="+expirationTime+") claim value" + skewMessage();
+                String msg = "The JWT is no longer valid - the evaluation time " + evaluationTime + " is on or after the Expiration Time (exp=" + expirationTime + ") claim value" + skewMessage();
+                return new Error(ErrorCodes.EXPIRED, msg);
             }
 
             if (issuedAt != null && expirationTime.isBefore(issuedAt))
             {
-                return "The Expiration Time (exp="+expirationTime+") claim value cannot be before the Issued At (iat="+issuedAt+") claim value.";
+                return new Error(ErrorCodes.MISCELLANEOUS, "The Expiration Time (exp="+expirationTime+") claim value cannot be before the Issued At (iat="+issuedAt+") claim value.");
             }
 
             if (notBefore != null && expirationTime.isBefore(notBefore))
             {
-                return "The Expiration Time (exp="+expirationTime+") claim value cannot be before the Not Before (nbf="+notBefore+") claim value.";
+                return new Error(ErrorCodes.MISCELLANEOUS, "The Expiration Time (exp="+expirationTime+") claim value cannot be before the Not Before (nbf="+notBefore+") claim value.");
             }
 
             if (maxFutureValidityInMinutes > 0)
@@ -109,8 +114,9 @@ public class NumericDateValidator implements Validator
                 long deltaInSeconds = (expirationTime.getValue() - allowedClockSkewSeconds) - evaluationTime.getValue();
                 if (deltaInSeconds > (maxFutureValidityInMinutes * 60))
                 {
-                    return "The Expiration Time (exp="+expirationTime+") claim value cannot be more than " + maxFutureValidityInMinutes
+                    String msg = "The Expiration Time (exp="+expirationTime+") claim value cannot be more than " + maxFutureValidityInMinutes
                             + " minutes in the future relative to the evaluation time " + evaluationTime + skewMessage();
+                    return new Error(ErrorCodes.EXPIRATION_TOO_FAR_IN_FUTURE, msg);
                 }
             }
         }
@@ -119,7 +125,8 @@ public class NumericDateValidator implements Validator
         {
             if ((evaluationTime.getValue() + allowedClockSkewSeconds) < notBefore.getValue())
             {
-                return "The JWT is not yet valid as the evaluation time " + evaluationTime + " is before the Not Before (nbf="+notBefore+") claim time" + skewMessage();
+                String msg = "The JWT is not yet valid as the evaluation time " + evaluationTime + " is before the Not Before (nbf=" + notBefore + ") claim time" + skewMessage();
+                return new Error(ErrorCodes.NOT_YET_VALID, msg);
             }
         }
 

@@ -35,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static org.jose4j.jws.AlgorithmIdentifiers.NONE;
+import static org.jose4j.jwt.consumer.ErrorCodes.*;
 
 /**
  *
@@ -44,7 +45,7 @@ public class JwtConsumer
     private VerificationKeyResolver verificationKeyResolver;
     private DecryptionKeyResolver decryptionKeyResolver;
 
-    private List<Validator> validators;
+    private List<ErrorCodeValidator> validators;
 
     private AlgorithmConstraints jwsAlgorithmConstraints;
     private AlgorithmConstraints jweAlgorithmConstraints;
@@ -98,7 +99,7 @@ public class JwtConsumer
         this.decryptionKeyResolver = decryptionKeyResolver;
     }
 
-    void setValidators(List<Validator> validators)
+    void setValidators(List<ErrorCodeValidator> validators)
     {
         this.validators = validators;
     }
@@ -212,7 +213,7 @@ public class JwtConsumer
 
                         if (!jws.verifySignature())
                         {
-                            throw new InvalidJwtSignatureException("JWS signature is invalid: " + jws);
+                            throw new InvalidJwtSignatureException(jws, jwtContext);
                         }
                     }
 
@@ -230,7 +231,8 @@ public class JwtConsumer
                     Key key = decryptionKeyResolver.resolveKey(jwe, nestingContext);
                     if (key != null && !key.equals(jwe.getKey()))
                     {
-                        throw new InvalidJwtException("The resolved decryption key is different than the one originally used to decrypt the JWE.");
+                        List<ErrorCodeValidator.Error> errors = Collections.singletonList(new ErrorCodeValidator.Error(MISCELLANEOUS, "Key resolution problem."));
+                        throw new InvalidJwtException("The resolved decryption key is different than the one originally used to decrypt the JWE.", errors, jwtContext);
                     }
 
                     if (jweAlgorithmConstraints != null)
@@ -255,7 +257,8 @@ public class JwtConsumer
                     sb.append(" nested");
                 }
                 sb.append(" JOSE object (cause: ").append(e).append("): ").append(currentJoseObject);
-                throw new InvalidJwtException(sb.toString(), e);
+                ErrorCodeValidator.Error error = new ErrorCodeValidator.Error(ErrorCodes.MISCELLANEOUS, sb.toString());
+                throw new InvalidJwtException("JWT processing failed." , error, e, jwtContext);
             }
             catch (InvalidJwtException e)
             {
@@ -270,19 +273,22 @@ public class JwtConsumer
                     sb.append(" nested");
                 }
                 sb.append(" JOSE object (").append(e).append("): ").append(currentJoseObject);
-                throw new InvalidJwtException(sb.toString(), e);
+                ErrorCodeValidator.Error error = new ErrorCodeValidator.Error(ErrorCodes.MISCELLANEOUS, sb.toString());
+                throw new InvalidJwtException("JWT processing failed." , error, e, jwtContext);
             }
         }
 
 
         if (requireSignature && !hasSignature)
         {
-            throw new InvalidJwtException("The JWT has no signature but the JWT Consumer is configured to require one: " + jwtContext.getJwt());
+            List<ErrorCodeValidator.Error> errors = Collections.singletonList(new ErrorCodeValidator.Error(SIGNATURE_MISSING, "Missing signature."));
+            throw new InvalidJwtException("The JWT has no signature but the JWT Consumer is configured to require one: " + jwtContext.getJwt(), errors, jwtContext);
         }
 
         if (requireEncryption && !hasEncryption)
         {
-            throw new InvalidJwtException("The JWT has no encryption but the JWT Consumer is configured to require it: " + jwtContext.getJwt());
+            List<ErrorCodeValidator.Error> errors = Collections.singletonList(new ErrorCodeValidator.Error(ENCRYPTION_MISSING, "No encryption."));
+            throw new InvalidJwtException("The JWT has no encryption but the JWT Consumer is configured to require it: " + jwtContext.getJwt(), errors, jwtContext);
         }
 
         validate(jwtContext);
@@ -293,6 +299,8 @@ public class JwtConsumer
         String workingJwt = jwt;
         JwtClaims jwtClaims = null;
         LinkedList<JsonWebStructure> joseObjects = new LinkedList<>();
+
+        JwtContext jwtContext = new JwtContext(jwt, null, Collections.unmodifiableList(joseObjects));
 
         while (jwtClaims == null)
         {
@@ -349,7 +357,8 @@ public class JwtConsumer
                 {
                     try
                     {
-                        jwtClaims = JwtClaims.parse(payload);
+                        jwtClaims = JwtClaims.parse(payload, jwtContext);
+                        jwtContext.setJwtClaims(jwtClaims);
                     }
                     catch (InvalidJwtException ije)
                     {
@@ -383,7 +392,8 @@ public class JwtConsumer
                     sb.append(" nested");
                 }
                 sb.append(" JOSE object (cause: ").append(e).append("): ").append(workingJwt);
-                throw new InvalidJwtException(sb.toString(), e);
+                ErrorCodeValidator.Error error = new ErrorCodeValidator.Error(ErrorCodes.MISCELLANEOUS, sb.toString());
+                throw new InvalidJwtException("JWT processing failed.", error, e, jwtContext);
             }
             catch (InvalidJwtException e)
             {
@@ -398,45 +408,45 @@ public class JwtConsumer
                     sb.append(" nested");
                 }
                 sb.append(" JOSE object (").append(e).append("): ").append(workingJwt);
-                throw new InvalidJwtException(sb.toString(), e);
+                ErrorCodeValidator.Error error = new ErrorCodeValidator.Error(ErrorCodes.MISCELLANEOUS, sb.toString());
+                throw new InvalidJwtException("JWT processing failed.", error, e, jwtContext);
             }
         }
 
-        JwtContext jwtContext = new JwtContext(jwt, jwtClaims, Collections.unmodifiableList(joseObjects));
         processContext(jwtContext);
         return jwtContext;
     }
 
     void validate(JwtContext jwtCtx) throws InvalidJwtException
     {
-        List<String> issues = new ArrayList<>();
-        for (Validator validator : validators)
+        List<ErrorCodeValidator.Error> issues = new ArrayList<>();
+        for (ErrorCodeValidator validator : validators)
         {
-            String validationResult;
+            ErrorCodeValidator.Error error;
             try
             {
-                validationResult  = validator.validate(jwtCtx);
+                error = validator.validate(jwtCtx);
             }
             catch (MalformedClaimException e)
             {
-                validationResult = e.getMessage();
+                error = new ErrorCodeValidator.Error(MALFORMED_CLAIM, e.getMessage());
             }
             catch (Exception e)
             {
-                validationResult = "Unexpected exception thrown from validator " + validator.getClass().getName() + ": " + ExceptionHelp.toStringWithCausesAndAbbreviatedStack(e, this.getClass());
+                String msg = "Unexpected exception thrown from validator " + validator.getClass().getName() + ": " + ExceptionHelp.toStringWithCausesAndAbbreviatedStack(e, this.getClass());
+                error = new ErrorCodeValidator.Error(MISCELLANEOUS, msg);
             }
 
-            if (validationResult != null)
+            if (error != null)
             {
-                issues.add(validationResult);
+                issues.add(error);
             }
         }
 
         if (!issues.isEmpty())
         {
-            InvalidJwtException invalidJwtException = new InvalidJwtException("JWT (claims->"+ jwtCtx.getJwtClaims().getRawJson()+") rejected due to invalid claims.");
-            invalidJwtException.setDetails(issues);
-            throw invalidJwtException;
+            String msg = "JWT (claims->" + jwtCtx.getJwtClaims().getRawJson() + ") rejected due to invalid claims.";
+            throw new InvalidJwtException(msg, issues, jwtCtx);
         }
     }
 

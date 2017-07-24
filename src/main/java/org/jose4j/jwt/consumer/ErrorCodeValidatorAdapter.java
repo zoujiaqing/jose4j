@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.jose4j.jwt.consumer;
 
 import org.jose4j.jwt.MalformedClaimException;
@@ -21,21 +20,19 @@ import org.jose4j.jwt.MalformedClaimException;
 /**
  *
  */
-public class JtiValidator implements ErrorCodeValidator
+public class ErrorCodeValidatorAdapter implements ErrorCodeValidator
 {
-    private static final Error MISSING_JTI = new Error(ErrorCodes.JWT_ID_MISSING, "The JWT ID (jti) claim is not present.");
+    private Validator validator;
 
-    private boolean requireJti;
-
-    public JtiValidator(boolean requireJti)
+    public ErrorCodeValidatorAdapter(Validator validator)
     {
-        this.requireJti = requireJti;
+        this.validator = validator;
     }
 
     @Override
     public Error validate(JwtContext jwtContext) throws MalformedClaimException
     {
-        String subject = jwtContext.getJwtClaims().getJwtId();
-        return (subject == null && requireJti) ? MISSING_JTI : null;
+        String result = validator.validate(jwtContext);
+        return (result == null) ? null : new Error(ErrorCodes.MISCELLANEOUS, result);
     }
 }

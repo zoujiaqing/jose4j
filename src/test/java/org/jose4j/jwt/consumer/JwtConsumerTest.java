@@ -33,6 +33,7 @@ import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
 import org.jose4j.jwt.NumericDate;
+import org.jose4j.jwx.CompactSerializer;
 import org.jose4j.jwx.HeaderParameterNames;
 import org.jose4j.jwx.JsonWebStructure;
 import org.jose4j.keys.AesKey;
@@ -66,9 +67,7 @@ import static org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers.AES_256_GCM;
 import static org.jose4j.jwe.KeyManagementAlgorithmIdentifiers.A128GCMKW;
 import static org.jose4j.jwe.KeyManagementAlgorithmIdentifiers.A192GCMKW;
 import static org.jose4j.jwe.KeyManagementAlgorithmIdentifiers.A256GCMKW;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -557,6 +556,211 @@ public class JwtConsumerTest
     }
 
     @Test
+    public void customErrorCodeValidatorTest() throws Exception
+    {
+        // {"iss":"same","aud":"same","exp":1420046060}
+        String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzYW1lIiwiYXVkIjoic2FtZSIsImV4cCI6MTQyMDA0NjA2MH0.O1w_nkfQMZvEEvJ0Pach0gPmJUMW8o4aFlA1f2c8m-I";
+
+        JwtConsumer firstPassConsumer = new JwtConsumerBuilder()
+                .setSkipAllValidators()
+                .setDisableRequireSignature()
+                .setSkipSignatureVerification()
+                .build();
+
+        JwtContext jwtContext = firstPassConsumer.process(jwt);
+
+        JsonWebKey jsonWebKey = JsonWebKey.Factory.newJwk("{\"kty\":\"oct\",\"k\":\"IWlxz1h43wKzyigIXNn-dTRBu89M9L8wmJK4zZmUXrQ\"}");
+        JwtConsumer consumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1420046040))
+                .setExpectedAudience("same", "different")
+                .setExpectedIssuer("same")
+                .setRequireExpirationTime()
+                .setVerificationKey(jsonWebKey.getKey())
+                .build();
+
+        final int errorCode = -76717;
+
+        JwtContext process = consumer.process(jwt);
+        Assert.assertThat(1, equalTo(process.getJoseObjects().size()));
+        consumer.processContext(jwtContext);
+
+        consumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1420046040))
+                .setExpectedAudience("same", "different")
+                .setExpectedIssuer("same")
+                .setRequireExpirationTime()
+                .setVerificationKey(jsonWebKey.getKey())
+                .registerValidator(new ErrorCodeValidator()
+                {
+                    @Override
+                    public Error validate(JwtContext jwtContext) throws MalformedClaimException
+                    {
+                        JwtClaims jcs = jwtContext.getJwtClaims();
+                        String audience = jcs.getAudience().iterator().next();
+                        String issuer = jcs.getIssuer();
+
+                        if (issuer.equals(audience))
+                        {
+
+                            return new Error(errorCode, "You can go blind issuing tokens to yourself...");
+                        }
+
+                        return null;
+                    }
+                })
+                .build();
+
+        InvalidJwtException invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
+
+        assertTrue(invalidJwtException.hasErrorCode(errorCode));
+        assertFalse(invalidJwtException.hasExpired());
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.MALFORMED_CLAIM));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRATION_TOO_FAR_IN_FUTURE));
+    }
+
+    @Test
+    public void errorExpiredErrorCodeValidation() throws Exception
+    {
+        JwtClaims jwtClaims = new JwtClaims();
+        jwtClaims.setExpirationTimeMinutesInTheFuture(-1);
+        jwtClaims.setIssuer("ISS");
+        jwtClaims.setAudience("AUD");
+        jwtClaims.setSubject("SUB");
+
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setPayload(jwtClaims.toJson());
+        jws.setKey(ExampleRsaKeyFromJws.PRIVATE_KEY);
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+        String jwt = jws.getCompactSerialization();
+
+        JwtConsumer consumer = new JwtConsumerBuilder()
+                .setExpectedAudience("AUD")
+                .setExpectedIssuer("ISS")
+                .setRequireExpirationTime()
+                .setVerificationKey(ExampleRsaKeyFromJws.PUBLIC_KEY)
+                .build();
+
+        InvalidJwtException invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, consumer);
+        assertTrue(invalidJwtException.hasExpired());
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.NOT_YET_VALID));
+    }
+
+    @Test
+    public void varietyOfErrorCodeValidation() throws Exception
+    {
+        JwtClaims jwtClaims = new JwtClaims();
+        jwtClaims.setExpirationTimeMinutesInTheFuture(10);
+        jwtClaims.setIssuer("ISS");
+        jwtClaims.setAudience("AUD");
+        jwtClaims.setSubject("SUB");
+
+        JsonWebSignature jws = new JsonWebSignature();
+        String claimsJson = jwtClaims.toJson();
+        jws.setPayload(claimsJson);
+        jws.setKey(ExampleRsaKeyFromJws.PRIVATE_KEY);
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+        String jwt = jws.getCompactSerialization();
+
+        JwtConsumer consumer = new JwtConsumerBuilder()
+                .setExpectedAudience("nope")
+                .setExpectedIssuer("ISS")
+                .setRequireExpirationTime()
+                .setVerificationKey(ExampleRsaKeyFromJws.PUBLIC_KEY)
+                .build();
+
+        InvalidJwtException invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, consumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRED));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.NOT_YET_VALID));
+
+        consumer = new JwtConsumerBuilder()
+                .setExpectedAudience("AUD")
+                .setExpectedIssuer("no way")
+                .setRequireExpirationTime()
+                .setVerificationKey(ExampleRsaKeyFromJws.PUBLIC_KEY)
+                .build();
+
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, consumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRED));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.NOT_YET_VALID));
+
+        consumer = new JwtConsumerBuilder()
+                .setMaxFutureValidityInMinutes(5)
+                .setExpectedAudience("nope")
+                .setExpectedIssuer("no way")
+                .setRequireExpirationTime()
+                .setVerificationKey(ExampleRsaKeyFromJws.PUBLIC_KEY)
+                .build();
+
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, consumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_INVALID));
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_INVALID));
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRATION_TOO_FAR_IN_FUTURE));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRED));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.NOT_YET_VALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.SIGNATURE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.SIGNATURE_MISSING));
+
+        consumer = new JwtConsumerBuilder()
+                .setMaxFutureValidityInMinutes(55)
+                .setExpectedAudience("AUD")
+                .setExpectedIssuer("ISS")
+                .setRequireExpirationTime()
+                .setVerificationKey(ExampleRsaKeyFromJws.PUBLIC_KEY)
+                .build();
+
+        JwtContext process = consumer.process(jwt);
+        Assert.assertThat("SUB", equalTo(process.getJwtClaims().getSubject()));
+
+        String[] parts = CompactSerializer.deserialize(jwt);
+        parts[2] = "NGns23fwIfHwxj0tDsFcFuzrlZYopHMWm5gaUzZyNdAwfLU3n_idriThNBjcA2Y68-3cw6IJs9sGmPlNVmXOtEG5n5DrjjmMLCpoeBvLmKW_sCPM35Dx62ZCoi4_" +
+                "QlfZvOVoSfzR9i7_9QwAmpRiPYBFLC3SVH2exH3Cr3FKIKqADeOf3yo86w22JaftSRcpA0I1wVOGvCvrw2EfO1nFuhl5g7Wp1Jl1aRnmYPo9v656Dq_" +
+                "zfmdNY8W9yGeuNXnpPTx4gXeQ2GbXS95vBzansM769TPtNaEC_kaQxzYMdPmc1MkAwqFcw6RQ6Qfv4JUwKs19XGwAuWLN8vT6djTODw";
+        String badSigJwt = CompactSerializer.serialize(parts);
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(badSigJwt, consumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.SIGNATURE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_INVALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRATION_TOO_FAR_IN_FUTURE));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.AUDIENCE_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.EXPIRED));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.ISSUER_MISSING));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.NOT_YET_VALID));
+        assertFalse(invalidJwtException.hasErrorCode(ErrorCodes.SIGNATURE_MISSING));
+
+        JsonWebEncryption jwe = new JsonWebEncryption();
+        jwe.setPayload(claimsJson);
+        jwe.setKey(ExampleRsaKeyFromJws.PUBLIC_KEY);
+        jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+        jwe.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        String encryptedOnlyJwt = jwe.getCompactSerialization();
+
+        consumer = new JwtConsumerBuilder()
+                .setMaxFutureValidityInMinutes(55)
+                .setExpectedAudience("AUD")
+                .setExpectedIssuer("ISS")
+                .setRequireExpirationTime()
+                .setDecryptionKey(ExampleRsaKeyFromJws.PRIVATE_KEY)
+                .build();
+
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(encryptedOnlyJwt, consumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.SIGNATURE_MISSING));
+    }
+
+
+    @Test
     public void wrappedNpeFromCustomValidatorTest() throws Exception
     {
         String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzYW1lIiwiZXhwIjoxNDIwMDQ2ODE0fQ.LUViXhiMJRZa5veg6ayZCDQaIc0GfVDJDx-878WbFzg";
@@ -612,6 +816,64 @@ public class JwtConsumerTest
 
         SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext,consumer);
     }
+
+    @Test
+    public void wrappedNpeFromCustomErrorCodeValidatorTest() throws Exception
+    {
+        String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzYW1lIiwiZXhwIjoxNDIwMDQ2ODE0fQ.LUViXhiMJRZa5veg6ayZCDQaIc0GfVDJDx-878WbFzg";
+
+        JwtConsumer firstPassConsumer = new JwtConsumerBuilder()
+                .setSkipAllValidators()
+                .setDisableRequireSignature()
+                .setSkipSignatureVerification()
+                .build();
+
+        JwtContext jwtContext = firstPassConsumer.process(jwt);
+
+        JsonWebKey jsonWebKey = JsonWebKey.Factory.newJwk("{\"kty\":\"oct\",\"k\":\"Ek1bHgP9uYyEtB5-V6oAzT_wB4mUnvCpirPqO4MyFwE\"}");
+        JwtConsumer consumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1420046767))
+                .setExpectedAudience(false, "other", "different")
+                .setExpectedIssuer("same")
+                .setRequireExpirationTime()
+                .setVerificationKey(jsonWebKey.getKey())
+                .build();
+
+        JwtContext process = consumer.process(jwt);
+        Assert.assertThat(1, equalTo(process.getJoseObjects().size()));
+        consumer.processContext(jwtContext);
+
+        consumer = new JwtConsumerBuilder()
+                .setEvaluationTime(NumericDate.fromSeconds(1420046768))
+                .setExpectedAudience(false, "other", "different")
+                .setExpectedIssuer("same")
+                .setRequireExpirationTime()
+                .setVerificationKey(jsonWebKey.getKey())
+                .registerValidator(new ErrorCodeValidator()
+                {
+                    @Override
+                    public Error validate(JwtContext jwtContext) throws MalformedClaimException
+                    {
+                        try
+                        {
+                            JwtClaims jcs = jwtContext.getJwtClaims();
+                            List<String> audience = jcs.getAudience();
+                            Iterator<String> iterator = audience.iterator();  // this will NPE
+                            iterator.next();
+
+                            return null;
+                        }
+                        catch (Exception e)
+                        {
+                            throw new RuntimeException("Something bad happened.", e);
+                        }
+                    }
+                })
+                .build();
+
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext,consumer);
+    }
+
 
     @Test
     public void someExpectedAndUnexpectedEx() throws Exception

@@ -43,9 +43,18 @@ public class JwtContext
         this.joseObjects = joseObjects;
     }
 
+    /**
+     * Gets the claims from the processed JWT (when available) .
+     * @return the JWT claims (may be null if there was an error preventing the JSON claims from being parsed)
+     */
     public JwtClaims getJwtClaims()
     {
         return jwtClaims;
+    }
+
+    void setJwtClaims(JwtClaims jwtClaims)
+    {
+        this.jwtClaims = jwtClaims;
     }
 
     /**
@@ -58,6 +67,10 @@ public class JwtContext
         return joseObjects;
     }
 
+    /**
+     * Gets the original 'raw' JWT string.
+     * @return the JWT
+     */
     public String getJwt()
     {
         return jwt;
