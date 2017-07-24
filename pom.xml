@@ -124,7 +124,7 @@
           <version>2.9.1</version>
           <configuration>
             <!-- allow Javadoc tool to be lenient w/ java 8 - see http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html -->
-            <!--<additionalparam>-Xdoclint:none</additionalparam>-->
+            <additionalparam>-Xdoclint:none</additionalparam>
           </configuration>
         </plugin>
         <plugin>
