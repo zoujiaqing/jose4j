@@ -82,4 +82,13 @@ public class GetTest
         SimpleResponse simpleResponse = get.get(location);
         System.out.println(simpleResponse);
     }
+
+    @Test
+    public void followRedirect() throws Exception
+    {
+        String location = "http://httpbin.org/redirect-to?url=http%3A%2F%2Fexample.com%2F";
+        Get get = new Get();
+        SimpleResponse simpleResponse = get.get(location);  // redirects to example.com
+        System.out.println(simpleResponse);
+    }
 }
