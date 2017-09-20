@@ -45,6 +45,8 @@ public class DeflateRFC1951CompressionAlgorithm implements CompressionAlgorithm
         catch (IOException e)
         {
             throw new UncheckedJoseException("Problem compressing data.", e);
+        } finally {
+            deflater.end();
         }
     }
 
@@ -67,6 +69,8 @@ public class DeflateRFC1951CompressionAlgorithm implements CompressionAlgorithm
         catch (IOException e)
         {
             throw new JoseException("Problem decompressing data.", e);
+        } finally {
+            inflater.end();
         }
     }
 
