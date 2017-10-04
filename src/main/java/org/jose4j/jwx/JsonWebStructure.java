@@ -45,8 +45,6 @@ public abstract class JsonWebStructure
 {
     protected Base64Url base64url = new Base64Url();
 
-    private X509Util x509Util = new X509Util();
-
     protected Headers headers = new Headers();
 
     private byte[] integrity;
@@ -177,23 +175,24 @@ public abstract class JsonWebStructure
         return getHeader(HeaderParameterNames.KEY_ID);
     }
 
-    public X509Certificate getLeafCertificate() throws JoseException
+    public X509Certificate getLeafCertificateHeaderValue() throws JoseException
     {
-        List<X509Certificate> certificateChain = getCertificateChain();
+        List<X509Certificate> certificateChain = getCertificateChainHeaderValue();
 
         return (certificateChain == null || certificateChain.isEmpty()) ? null : certificateChain.get(0);
     }
 
-    @SuppressWarnings("unchecked")
-    public List<X509Certificate> getCertificateChain() throws JoseException
+    public List<X509Certificate> getCertificateChainHeaderValue() throws JoseException
     {
         Object x5c =  headers.getObjectHeaderValue(X509_CERTIFICATE_CHAIN);
 
-        if (x5c instanceof List) {
+        if (x5c instanceof List)
+        {
             List x5cList = (List) x5c;
             List<X509Certificate> certificateChain = new ArrayList<>(x5cList.size());
-
-            for (Object certificate : x5cList) {
+            X509Util x509Util = new X509Util();
+            for (Object certificate : x5cList)
+            {
                 certificateChain.add(x509Util.fromBase64Der((String) certificate));
             }
 
@@ -203,12 +202,12 @@ public abstract class JsonWebStructure
         return null;
     }
 
-    @SuppressWarnings("unchecked")
-    public void setCertificateChain(X509Certificate... chain)
+    public void setCertificateChainHeaderValue(X509Certificate... chain)
     {
         List<String> chainStrings = new ArrayList<>();
-
-        for (X509Certificate certificate : chain) {
+        X509Util x509Util = new X509Util();
+        for (X509Certificate certificate : chain)
+        {
             chainStrings.add(x509Util.toBase64(certificate));
         }
 
