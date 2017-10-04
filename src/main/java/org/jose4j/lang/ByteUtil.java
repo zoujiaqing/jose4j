@@ -68,12 +68,12 @@ public class ByteUtil
         return byteBuffer.array();
     }
 
-    public static byte[] getBytes(long intValue)
-     {
+    public static byte[] getBytes(long longValue)
+    {
          ByteBuffer byteBuffer = ByteBuffer.allocate(8);
-         byteBuffer.putLong(intValue);
+         byteBuffer.putLong(longValue);
          return byteBuffer.array();
-     }
+    }
 
     public static int getInt(byte b)
     {
