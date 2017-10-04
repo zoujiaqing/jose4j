@@ -28,12 +28,14 @@ import org.jose4j.lang.JoseException;
 
 import java.security.Key;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.jose4j.jwx.HeaderParameterNames.X509_CERTIFICATE_CHAIN;
 import static org.jose4j.jwx.HeaderParameterNames.X509_CERTIFICATE_SHA256_THUMBPRINT;
 import static org.jose4j.jwx.HeaderParameterNames.X509_CERTIFICATE_THUMBPRINT;
 
@@ -42,6 +44,8 @@ import static org.jose4j.jwx.HeaderParameterNames.X509_CERTIFICATE_THUMBPRINT;
 public abstract class JsonWebStructure
 {
     protected Base64Url base64url = new Base64Url();
+
+    private X509Util x509Util = new X509Util();
 
     protected Headers headers = new Headers();
 
@@ -171,6 +175,44 @@ public abstract class JsonWebStructure
     public String getKeyIdHeaderValue()
     {
         return getHeader(HeaderParameterNames.KEY_ID);
+    }
+
+    public X509Certificate getLeafCertificate() throws JoseException
+    {
+        List<X509Certificate> certificateChain = getCertificateChain();
+
+        return (certificateChain == null || certificateChain.isEmpty()) ? null : certificateChain.get(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<X509Certificate> getCertificateChain() throws JoseException
+    {
+        Object x5c =  headers.getObjectHeaderValue(X509_CERTIFICATE_CHAIN);
+
+        if (x5c instanceof List) {
+            List x5cList = (List) x5c;
+            List<X509Certificate> certificateChain = new ArrayList<>(x5cList.size());
+
+            for (Object certificate : x5cList) {
+                certificateChain.add(x509Util.fromBase64Der((String) certificate));
+            }
+
+            return certificateChain;
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void setCertificateChain(X509Certificate... chain)
+    {
+        List<String> chainStrings = new ArrayList<>();
+
+        for (X509Certificate certificate : chain) {
+            chainStrings.add(x509Util.toBase64(certificate));
+        }
+
+        headers.setObjectHeaderValue(X509_CERTIFICATE_CHAIN, chainStrings);
     }
 
     public String getX509CertSha1ThumbprintHeaderValue()

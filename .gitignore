@@ -7,3 +7,4 @@ target
 *.iml
 *.ipr
 draft-ietf-jose-cookbook.txt
+/.idea/

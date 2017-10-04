@@ -32,6 +32,8 @@ public class HeaderParameterNames
 
     public static final String JWK_SET_URL = "jku";
 
+    public static final String X509_CERTIFICATE_CHAIN = "x5c";
+
     public static final String X509_CERTIFICATE_THUMBPRINT = "x5t";
 
     public static final String X509_CERTIFICATE_SHA256_THUMBPRINT = "x5t#S256";
