@@ -26,6 +26,7 @@ import org.jose4j.lang.InvalidAlgorithmException;
 import org.jose4j.lang.JoseException;
 import org.junit.Test;
 
+import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
 
@@ -146,6 +147,25 @@ public class JsonWebEncryptionTest
         assertEquals(plaintext, jweForDecrypt.getPlaintextString());
     }
 
+    @Test
+    public void testHappyRoundTripRsaOaepAndAesCbc256() throws JoseException
+    {
+        JsonWebEncryption jweForEncrypt = new JsonWebEncryption();
+        String plaintext = "Some text that's on double secret probation";
+        jweForEncrypt.setPlaintext(plaintext);
+        jweForEncrypt.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+        jweForEncrypt.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
+        jweForEncrypt.setKey(ExampleRsaJwksFromJwe.APPENDIX_A_2.getPublicKey());
+
+        String compactSerialization = jweForEncrypt.getCompactSerialization();
+
+        JsonWebEncryption jweForDecrypt = new JsonWebEncryption();
+        jweForDecrypt.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, KeyManagementAlgorithmIdentifiers.RSA_OAEP));
+        jweForDecrypt.setCompactSerialization(compactSerialization);
+        jweForDecrypt.setKey(ExampleRsaJwksFromJwe.APPENDIX_A_2.getPrivateKey());
+
+        assertEquals(plaintext, jweForDecrypt.getPlaintextString());
+    }
 
     @Test
     public void testHappyRoundTripDirectAndAesCbc128() throws JoseException
