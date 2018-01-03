@@ -132,18 +132,7 @@ public abstract class BaseSignatureAlgorithm extends AlgorithmInfo implements Js
             Signature signature = sigProvider == null ? Signature.getInstance(javaAlg) : Signature.getInstance(javaAlg, sigProvider);
             if (algorithmParameterSpec != null)
             {
-                try
-                {
-                    signature.setParameter(algorithmParameterSpec);
-                }
-                catch (UnsupportedOperationException e)
-                {
-                    if (log.isDebugEnabled())
-                    {
-                        log.debug("Unable to set algorithm parameter spec on Signature (java algorithm name: " + javaAlg +
-                                ") so ignoring the UnsupportedOperationException and relying on the default parameters.", e);
-                    }
-                }
+                signature.setParameter(algorithmParameterSpec);
             }
             return signature;
         }
