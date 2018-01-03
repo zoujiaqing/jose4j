@@ -19,6 +19,13 @@ import org.jose4j.keys.X509Util;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 /**
@@ -73,6 +80,35 @@ public class GetTest
         System.out.println(simpleResponse);
     }
 
+    @Test
+    public void localPFUsingSocketFactoryWithTrustAnything() throws Exception
+    {
+        String location = "https://localhost:9031/pf/JWKS";
+
+        TrustManager[] tms = new TrustManager[] { new X509TrustManager()
+        {
+            @Override
+            public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException { }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException { }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() { return null; }
+        }};
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tms, null);
+        SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+        Get get = new Get();
+        get.setSslSocketFactory(sslSocketFactory);
+        get.setReadTimeout(200);
+        get.setRetries(5);
+        get.setProgressiveRetryWait(true);
+        SimpleResponse simpleResponse = get.get(location);
+        System.out.println(simpleResponse);
+    }
 
     @Test
     public void googlesJWKS() throws Exception

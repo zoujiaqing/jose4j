@@ -19,9 +19,15 @@ import java.io.IOException;
 import java.net.URL;
 
 /**
- *
+ *  A simple HTTP GET
  */
 public interface SimpleGet
 {
+    /**
+     * Make an HTTP GET request
+     * @param location the HTTP(S) URL
+     * @return a SimpleResponse object representing the result of the HTTP GET request
+     * @throws IOException if a problem occurs with the request 
+     */
     public SimpleResponse get(String location) throws IOException;
 }

@@ -40,7 +40,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
+ *  An implantation of SimpleGet (used by {@link org.jose4j.jwk.HttpsJwks}) that
+ *  uses {@link java.net.URL} and {@link javax.net.ssl.HttpsURLConnection} to make
+ *  basic HTTP GET requests. 
  */
 public class Get implements SimpleGet
 {
@@ -191,8 +193,11 @@ public class Get implements SimpleGet
     }
 
     /**
+     * Sets a specified timeout value, in milliseconds, to be used by
+     * the underlying URLConnection when opening a communications link to the resource referenced
+     * by the URLConnection.  Default is 20000.
      *
-     * @param connectTimeout in milliseconds
+     * @param connectTimeout the timeout value to be used in milliseconds
      */
     public void setConnectTimeout(int connectTimeout)
     {
@@ -200,53 +205,88 @@ public class Get implements SimpleGet
     }
 
     /**
-     *
-     * @param readTimeout in milliseconds
+     * Sets the read timeout to the specified value, in
+     * milliseconds, for the underlying URLConnection.  Default is 20000.
+     * 
+     * @param readTimeout the timeout value to be used in milliseconds
      */
     public void setReadTimeout(int readTimeout)
     {
         this.readTimeout = readTimeout;
     }
 
+
+    /**
+     * Sets the HostnameVerifier used by the underlying HttpsURLConnection.
+     * @param hostnameVerifier the host name verifier
+     */
     public void setHostnameVerifier(HostnameVerifier hostnameVerifier)
     {
         this.hostnameVerifier = hostnameVerifier;
     }
 
+    /**
+     * Same as {@link org.jose4j.http.Get#setTrustedCertificates(Collection)} 
+     * @param certificates certificates to trust
+     */
     public void setTrustedCertificates(X509Certificate... certificates)
     {
         setTrustedCertificates(Arrays.asList(certificates));
     }
 
+    /**
+     * Sets the number times to retry in the case of a request that failed for a reason
+     * that potently could be recovered from. Default is 3.
+     * @param retries the number of times to retry
+     */
     public void setRetries(int retries)
     {
         this.retries = retries;
     }
 
+    /**
+     * Sets whether a progressively longer wait time should be used between retry attempts (up to a max of 8000). Defaut is true.
+     * @param progressiveRetryWait true for a progressively longer retry wait time, false for a static retry wait time
+     */
     public void setProgressiveRetryWait(boolean progressiveRetryWait)
     {
         this.progressiveRetryWait = progressiveRetryWait;
     }
 
     /**
-     *
-     * @param initialRetryWaitTime in milliseconds
+     * Sets the initial wait time for retry requests. Default is 180.
+     * @param initialRetryWaitTime wait time in milliseconds
      */
     public void setInitialRetryWaitTime(long initialRetryWaitTime)
     {
-
         this.initialRetryWaitTime = initialRetryWaitTime;
     }
 
     /**
-     * in number of characters, -1 indicates no limit
-     * @param responseBodySizeLimit
+     * Sets a limit on the size of the response body that will be consumed. Default is 1,024,512.
+     * @param responseBodySizeLimit size limit of the response body in number of characters, -1 indicates no limit
      */
     public void setResponseBodySizeLimit(int responseBodySizeLimit)
     {
         this.responseBodySizeLimit = responseBodySizeLimit;
     }
 
+    /**
+     * Sets the certificates that will be used by the underlying HttpsURLConnection as trust anchors when validating the HTTPS certificate presented by the server.
+     * 
+     * When this method is used, the provided certificates become the only trusted certificates for the instance
+     * (the ones from the java runtime won't be used in that context anymore).
+     *
+     * <p>
+     * Note that only one of {@link org.jose4j.http.Get#setSslSocketFactory(SSLSocketFactory)} or {@link org.jose4j.http.Get#setTrustedCertificates(Collection)}
+     * or {@link org.jose4j.http.Get#setTrustedCertificates(X509Certificate...)} should be used
+     * per instance of this class as each results in the setting of the underlying SSLSocketFactory used by the HttpsURLConnection and the last
+     * method to be called will effectively override
+     * the others.
+     * </p>
+     *
+     * @param certificates certificates to trust
+     */
     public void setTrustedCertificates(Collection<X509Certificate> certificates)
     {
         try
@@ -270,14 +310,38 @@ public class Get implements SimpleGet
             throw new UncheckedJoseException("Unable to initialize socket factory with custom trusted  certificates.", e);
         }
     }
+    /**
+     * <p>
+     * Sets the SSLSocketFactory to used when creating sockets for HTTPS connections, which allows
+     * for control over the details of creating and initially configuring the secure sockets such
+     * as setting authentication keys, peer certificate validation, enabled cipher suites, and so on.
+     * </p>
+     * <p>
+     * Note that only one of {@link org.jose4j.http.Get#setSslSocketFactory(SSLSocketFactory)} or {@link org.jose4j.http.Get#setTrustedCertificates(Collection)}
+     * or {@link org.jose4j.http.Get#setTrustedCertificates(X509Certificate...)} should be used
+     * per instance of this class as each results in the setting of the underlying SSLSocketFactory used by the HttpsURLConnection and the last
+     * method to be called will effectively override
+     * the others.
+     * </p>
+     *
+     * @param sslSocketFactory the SSLSocketFactory
+     */
+    public void setSslSocketFactory(SSLSocketFactory sslSocketFactory)
+    {
+        this.sslSocketFactory = sslSocketFactory;
+    }
 
+    /**
+     * Sets the Proxy through which the connection will be made with {@link java.net.URL#openConnection(Proxy)}.
+     * By default no Proxy is used when making the connection - e.g. just {@link java.net.URL#openConnection()}.
+     * @param proxy the Proxy through which the connection will be made
+     */
     public void setHttpProxy(Proxy proxy)
     {
         this.proxy = proxy;
     }
 
-    // todo -> need to give control over acceptable cipher suites? probably...
-
+    
     private static class ResponseBodyTooLargeException extends IOException
     {
         public ResponseBodyTooLargeException(String message)

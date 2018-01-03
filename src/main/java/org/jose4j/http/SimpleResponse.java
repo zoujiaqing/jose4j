@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- *
+ *  The result of a simple HTTP GET 
  */
 public interface SimpleResponse
 {
