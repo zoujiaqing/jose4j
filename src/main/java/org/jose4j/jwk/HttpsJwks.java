@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents a set of JSON Web Keys (typically public keys) published at an HTTPS URI.
@@ -44,12 +45,14 @@ public class HttpsJwks
 {
     private static final Logger log = LoggerFactory.getLogger(HttpsJwks.class);
 
-    private String location;
-    private long defaultCacheDuration = 3600;  // seconds
-    private SimpleGet simpleHttpGet = new Get();
-    private long retainCacheOnErrorDurationMills = 0;
+    private final String location;
+    private volatile long defaultCacheDuration = 3600;  // seconds
+    private volatile SimpleGet simpleHttpGet = new Get();
+    private volatile long retainCacheOnErrorDurationMills = 0;
 
-    private Cache cache = new Cache(Collections.<JsonWebKey>emptyList(), 0);
+    private volatile Cache cache = new Cache(Collections.<JsonWebKey>emptyList(), 0);
+    // used to stop multiple threads from refreshing in parallel
+    private final ReentrantLock refreshLock = new ReentrantLock();
 
     /**
      * Create a new HttpsJwks that cab be used to retrieve JWKs from the given location.
@@ -119,26 +122,40 @@ public class HttpsJwks
     public List<JsonWebKey> getJsonWebKeys() throws JoseException, IOException
     {
         final long now = System.currentTimeMillis();
-        if (cache.getExp() < now)
+        Cache c = cache;
+        if (c.exp > now)
         {
-            try
+            // common case: keys are still good
+            return c.keys;
+        }
+        if (!refreshLock.tryLock())
+        {
+            // another thread is already refreshing, use cached keys for now
+            return c.keys;
+        }
+        // keys are expired and no other thread is refreshing them
+        try
+        {
+            refresh();
+            c = cache;
+        }
+        catch (Exception e)
+        {
+            if (retainCacheOnErrorDurationMills > 0 && !c.keys.isEmpty())
             {
-                refresh();
+                cache = c = new Cache(c.keys, now + retainCacheOnErrorDurationMills);
+                log.info("Because of {} unable to refresh JWKS content from {} so will continue to use cached keys for more {} seconds until about {} -> {}", ExceptionHelp.toStringWithCauses(e), location, retainCacheOnErrorDurationMills/1000L, new Date(c.exp), c.keys);
             }
-            catch (Exception e)
+            else
             {
-                if (retainCacheOnErrorDurationMills > 0 && !cache.keys.isEmpty())
-                {
-                    cache.exp = now + (retainCacheOnErrorDurationMills);
-                    log.info("Because of {} unable to refersh JWKS content from {} so will continue to use cached keys for more {} seconds until about {} -> {}", ExceptionHelp.toStringWithCauses(e), location, retainCacheOnErrorDurationMills/1000L, new Date(cache.exp), cache.keys);
-                }
-                else
-                {
-                    throw e;
-                }
+                throw e;
             }
         }
-        return cache.getKeys();
+        finally
+        {
+            refreshLock.unlock();
+        }
+        return c.keys;
     }
 
 
@@ -149,19 +166,27 @@ public class HttpsJwks
      */
     public void refresh() throws JoseException, IOException
     {
-        log.debug("Refreshing/loading JWKS from {}", location);
-        SimpleResponse simpleResponse = simpleHttpGet.get(location);
-        JsonWebKeySet jwks = new JsonWebKeySet(simpleResponse.getBody());
-        List<JsonWebKey> keys = jwks.getJsonWebKeys();
-        long cacheLife = getCacheLife(simpleResponse);
-        if (cacheLife <= 0)
+        refreshLock.lock();
+        try
         {
-            log.debug("Will use default cache duration of {} seconds for content from {}", defaultCacheDuration, location);
-            cacheLife = defaultCacheDuration;
+            log.debug("Refreshing/loading JWKS from {}", location);
+            SimpleResponse simpleResponse = simpleHttpGet.get(location);
+            JsonWebKeySet jwks = new JsonWebKeySet(simpleResponse.getBody());
+            List<JsonWebKey> keys = jwks.getJsonWebKeys();
+            long cacheLife = getCacheLife(simpleResponse);
+            if (cacheLife <= 0)
+            {
+                log.debug("Will use default cache duration of {} seconds for content from {}", defaultCacheDuration, location);
+                cacheLife = defaultCacheDuration;
+            }
+            long exp = System.currentTimeMillis() + (cacheLife * 1000L);
+            log.debug("Updated JWKS content from {} will be cached for {} seconds until about {} -> {}", location, cacheLife, new Date(exp), keys);
+            cache = new Cache(keys, exp);
+        } 
+        finally
+        {
+            refreshLock.unlock();
         }
-        long exp = System.currentTimeMillis() + (cacheLife * 1000L);
-        log.debug("Updated JWKS content from {} will be cached for {} seconds until about {} -> {}", location, cacheLife, new Date(exp), keys);
-        cache = new Cache(keys, exp);
     }
 
     static long getDateHeaderValue(SimpleResponse response, String headerName, long defaultValue)
@@ -237,23 +262,13 @@ public class HttpsJwks
 
     private static class Cache
     {
-        private List<JsonWebKey> keys;
-        private long exp;
+        private final List<JsonWebKey> keys;
+        private final long exp;
 
         private Cache(List<JsonWebKey> keys, long exp)
         {
             this.keys = keys;
             this.exp = exp;
-        }
-
-        private List<JsonWebKey> getKeys()
-        {
-            return keys;
-        }
-
-        private long getExp()
-        {
-            return exp;
         }
     }
 }
