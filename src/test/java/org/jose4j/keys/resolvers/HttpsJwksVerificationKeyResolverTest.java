@@ -65,6 +65,7 @@ public class HttpsJwksVerificationKeyResolverTest
         SimpleResponse ok2 = new Response(200, "OK", headers, secondJwkJson);
         when(mockGet.get(location)).thenReturn(ok1, ok2);
 
+        httpsJkws.setRefreshReprieveThreshold(0);
         httpsJkws.setSimpleHttpGet(mockGet);
 
         HttpsJwksVerificationKeyResolver resolver = new HttpsJwksVerificationKeyResolver(httpsJkws);
@@ -203,6 +204,7 @@ public class HttpsJwksVerificationKeyResolverTest
         SimpleResponse ok2 = new Response(200, "OK", headers, secondJwksJson);
         when(mockGet.get(location)).thenReturn(ok1, ok2);
 
+        httpsJkws.setRefreshReprieveThreshold(0);
         httpsJkws.setSimpleHttpGet(mockGet);
 
         HttpsJwksVerificationKeyResolver resolver = new HttpsJwksVerificationKeyResolver(httpsJkws);

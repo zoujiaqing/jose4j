@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2017 Brian Campbell
+ * Copyright 2012-2018 Brian Campbell
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,8 +51,11 @@ public class HttpsJwks
     private volatile long retainCacheOnErrorDurationMills = 0;
 
     private volatile Cache cache = new Cache(Collections.<JsonWebKey>emptyList(), 0);
+
     // used to stop multiple threads from refreshing in parallel
     private final ReentrantLock refreshLock = new ReentrantLock();
+    
+    private long refreshReprieveThreshold = 300L;
 
     /**
      * Create a new HttpsJwks that cab be used to retrieve JWKs from the given location.
@@ -113,6 +116,18 @@ public class HttpsJwks
         return location;
     }
 
+
+    /**
+     * Sets the period of time as a threshold for which a subsequent {@code refresh()} calls will use the cache and
+     * not actually refresh from the JWKS endpoint/URL.
+     * @param refreshReprieveThreshold the threshold time in milliseconds (probably should be a relatevily small value).
+     *                                The default value, if unset is 300.
+     */
+    public void setRefreshReprieveThreshold(long refreshReprieveThreshold)
+    {
+        this.refreshReprieveThreshold = refreshReprieveThreshold;
+    }
+
     /**
      * Gets the JSON Web Keys from the JWKS endpoint location or from local cache, if appropriate.
      * @return a list of JsonWebKeys
@@ -130,8 +145,15 @@ public class HttpsJwks
         }
         if (!refreshLock.tryLock())
         {
-            // another thread is already refreshing, use cached keys for now
-            return c.keys;
+            // another thread is already refreshing, use cached keys for now (if not null)
+            if (!c.keys.isEmpty())
+            {
+                return c.keys;
+            }
+            else
+            {
+                refreshLock.lock();
+            }
         }
         // keys are expired and no other thread is refreshing them
         try
@@ -160,7 +182,8 @@ public class HttpsJwks
 
 
     /**
-     * Forces a refresh of the cached JWKs from the JWKS endpoint.
+     * Forces a refresh of the cached JWKs from the JWKS endpoint.  With slight caveat/optimization that if the cache
+     * age is less than {@code refreshReprieveThreshold} it will not actually force a refresh but use the cache instead.
      * @throws JoseException if an problem is encountered parsing the JSON content into JSON Web Keys.
      * @throws IOException if a problem is encountered making the HTTP request.
      */
@@ -169,19 +192,28 @@ public class HttpsJwks
         refreshLock.lock();
         try
         {
-            log.debug("Refreshing/loading JWKS from {}", location);
-            SimpleResponse simpleResponse = simpleHttpGet.get(location);
-            JsonWebKeySet jwks = new JsonWebKeySet(simpleResponse.getBody());
-            List<JsonWebKey> keys = jwks.getJsonWebKeys();
-            long cacheLife = getCacheLife(simpleResponse);
-            if (cacheLife <= 0)
+            long last = System.currentTimeMillis() - cache.created;
+
+            if (last < refreshReprieveThreshold && !cache.keys.isEmpty())
             {
-                log.debug("Will use default cache duration of {} seconds for content from {}", defaultCacheDuration, location);
-                cacheLife = defaultCacheDuration;
+                log.debug("NOT refreshing/loading JWKS from {} because it just happened {} mills ago", location, last);
             }
-            long exp = System.currentTimeMillis() + (cacheLife * 1000L);
-            log.debug("Updated JWKS content from {} will be cached for {} seconds until about {} -> {}", location, cacheLife, new Date(exp), keys);
-            cache = new Cache(keys, exp);
+            else
+            {
+                log.debug("Refreshing/loading JWKS from {}", location);
+                SimpleResponse simpleResponse = simpleHttpGet.get(location);
+                JsonWebKeySet jwks = new JsonWebKeySet(simpleResponse.getBody());
+                List<JsonWebKey> keys = jwks.getJsonWebKeys();
+                long cacheLife = getCacheLife(simpleResponse);
+                if (cacheLife <= 0)
+                {
+                    log.debug("Will use default cache duration of {} seconds for content from {}", defaultCacheDuration, location);
+                    cacheLife = defaultCacheDuration;
+                }
+                long exp = System.currentTimeMillis() + (cacheLife * 1000L);
+                log.debug("Updated JWKS content from {} will be cached for {} seconds until about {} -> {}", location, cacheLife, new Date(exp), keys);
+                cache = new Cache(keys, exp);
+            }
         } 
         finally
         {
@@ -264,6 +296,7 @@ public class HttpsJwks
     {
         private final List<JsonWebKey> keys;
         private final long exp;
+        private final long created = System.currentTimeMillis();
 
         private Cache(List<JsonWebKey> keys, long exp)
         {

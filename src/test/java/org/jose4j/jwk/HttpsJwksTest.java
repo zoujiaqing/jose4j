@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2017 Brian Campbell
+ * Copyright 2012-2018 Brian Campbell
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,11 +127,35 @@ public class HttpsJwksTest
                 "uqZA83gZcy6re4wMnZvY2kWX9CsVWDCaZhnyhjBNYfhcOf0ZychoKShaEpTQ5UAG\n" +
                 "wvYYcbqIWC04GAZYVsZxlPl9hoA=\n");
 
+        X509Certificate x509Certificate = x509Util.fromBase64Der(
+                "MIIDVjCCAj6gAwIBAgIGAV+2AcB2MA0GCSqGSIb3DQEBCwUAMGwxCzAJBgNVBAYT\n" +
+                "AlVTMQswCQYDVQQIEwJDTzEPMA0GA1UEBxMGRGVudmVyMRUwEwYDVQQKEwxQaW5n\n" +
+                "SWRlbnRpdHkxFDASBgNVBAsTC0RldmVsb3BtZW50MRIwEAYDVQQDEwlsb2NhbGhv\n" +
+                "c3QwHhcNMTcxMTEzMTUzMTI5WhcNMjcxMTE0MTUzMTI5WjBsMQswCQYDVQQGEwJV\n" +
+                "UzELMAkGA1UECBMCQ08xDzANBgNVBAcTBkRlbnZlcjEVMBMGA1UEChMMUGluZ0lk\n" +
+                "ZW50aXR5MRQwEgYDVQQLEwtEZXZlbG9wbWVudDESMBAGA1UEAxMJbG9jYWxob3N0\n" +
+                "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjAjwydAR/F3pNntK9YCa\n" +
+                "5ewJ6qrW8BUbZsB7G3FvK2lD2jezp47PswQ6M2QbNAlkA7zv8qOcBb2lleoCyc70\n" +
+                "127MvkD3Pfrw5BSXR1LH8QhxIeayRVK0T28qmfMU9fc9zyn0rpB4eeC5KYSe9pXW\n" +
+                "vg+MUpE2hnW0ZaTkXWQxriBU46DEuiJ8qhd2ACoxHo1NQEWBTJt2fWVWe9Ai/YuE\n" +
+                "72g7DQdxZTamwo74Gp4RBZuVS+4xh42e0chktkNKNRo5/8Nkhb8CWNgjwakiNPXL\n" +
+                "4bIzyh0+/KQoUoyRz61Oj5Q6FXbIlEJhDFFZGuHgiMi1JR0CvQEoYng80d3Lj/Dw\n" +
+                "XwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAZcFMBOONUTdm9xZZ5Cnwlti+rzmE4\n" +
+                "w0JRAEazFXLdMim1PWwlaJ7dvqqLXJklLV/4uSocvoMFNAjpoR1v27mj7aWe0WD9\n" +
+                "NU/z+yiEvSjSzCoWWUbBYLxgOz+ZaP78SOU+SFzuZYaBj7GiZbj4MkDaozReDMmM\n" +
+                "uGJsSJeKo3qQVja6ma71gDyupTg9pu8h+Dk7NUB8AOEIX8bncheKKtiC/IiPa/PO\n" +
+                "nik9VuDu1Oq/W7d6bRzw3GrBq5puPX9ATonRqRqmWu4AMRi0G5kA75rWXes9TOII\n" +
+                "BK3F71z66Z6qlxIYDZl5qYIJEIE71/YqWIEzR4Cqpu59c3oJ7obdyGTz");
+
+        long start = System.currentTimeMillis();
 
         String location = "https://localhost:9031/pf/JWKS";
+//        location = "https://login.salesforce.com/id/keys";
+//        location = "https://www.googleapis.com/oauth2/v3/certs";
+//        location = "https://login.microsoftonline.com/consumers/discovery/v2.0/keys";
 
         Get get = new Get();
-        get.setTrustedCertificates(certificate);
+        get.setTrustedCertificates(certificate, x509Certificate);
 
         final HttpsJwks httpsJwks = new HttpsJwks(location);
         httpsJwks.setSimpleHttpGet(get);
@@ -144,17 +168,18 @@ public class HttpsJwksTest
             public List<JsonWebKey> call() throws Exception
             {
                 List<JsonWebKey> jsonWebKeys = null;
-                for (long i = 1000000000 ; i > 0 ; i--)
+                for (long i = 200000000 ; i > 0 ; i--)
                 {
                     jsonWebKeys = httpsJwks.getJsonWebKeys();
                     assertFalse(jsonWebKeys.isEmpty());
+                    if (i % 11000000 == 0) { httpsJwks.refresh(); }
                     if (i % 10000000 == 0) { log.debug("... working ... " + i + " ... " + Thread.currentThread().toString());}
                 }
                 return jsonWebKeys;
             }
         };
 
-        int threadCount = 5;
+        int threadCount = 15;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         List<Callable<List>> tasks = Collections.nCopies(threadCount, task);
 
@@ -165,5 +190,7 @@ public class HttpsJwksTest
         {
             log.debug(future.get().toString());
         }
+
+        System.out.println(System.currentTimeMillis() - start);
     }
 }
