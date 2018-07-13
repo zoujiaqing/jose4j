@@ -138,4 +138,11 @@ public class ErrorCodes
      * set up to require it.
      */
     public static final int ENCRYPTION_MISSING = 19;
+
+    /**
+     * The <code>JwtConsumer</code> was set up to require a JOSE algorithm that provides integrity protection
+     * (signature/MAC JWS or symmetric JWE) but no such protection was present on the JWT.
+     */
+    public static final int INTEGRITY_MISSING = 20;
+
 }

@@ -21,12 +21,17 @@ import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwa.JceProviderTestSupport;
 import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
 import org.jose4j.jwe.JsonWebEncryption;
+import org.jose4j.jwe.KeyManagementAlgorithm;
 import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
+import org.jose4j.jwk.EcJwkGenerator;
+import org.jose4j.jwk.EllipticCurveJsonWebKey;
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.jwk.JsonWebKeySet;
 import org.jose4j.jwk.OctJwkGenerator;
 import org.jose4j.jwk.OctetSequenceJsonWebKey;
 import org.jose4j.jwk.PublicJsonWebKey;
+import org.jose4j.jwk.RsaJsonWebKey;
+import org.jose4j.jwk.RsaJwkGenerator;
 import org.jose4j.jwk.SimpleJwkFilter;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
@@ -37,10 +42,13 @@ import org.jose4j.jwx.CompactSerializer;
 import org.jose4j.jwx.HeaderParameterNames;
 import org.jose4j.jwx.JsonWebStructure;
 import org.jose4j.keys.AesKey;
+import org.jose4j.keys.EcKeyUtil;
+import org.jose4j.keys.EllipticCurves;
 import org.jose4j.keys.ExampleEcKeysFromJws;
 import org.jose4j.keys.ExampleRsaJwksFromJwe;
 import org.jose4j.keys.ExampleRsaKeyFromJws;
 import org.jose4j.keys.FakeHsmNonExtractableSecretKeySpec;
+import org.jose4j.keys.HmacKey;
 import org.jose4j.keys.PbkdfKey;
 import org.jose4j.keys.resolvers.DecryptionKeyResolver;
 import org.jose4j.keys.resolvers.JwksDecryptionKeyResolver;
@@ -1323,6 +1331,18 @@ public class JwtConsumerTest
         Assert.assertThat("eh", equalTo(jwtClaims.getStringClaimValue("message")));
         consumer.processContext(jwtContext);
 
+
+        consumer = new JwtConsumerBuilder()
+            .setDecryptionKey(encKey.getPrivateKey())
+            .setVerificationKey(sigKey.getPublicKey())
+            .setEvaluationTime(NumericDate.fromSeconds(1420219088))
+            .setExpectedAudience("canada")
+            .setDisableRequireSignature()
+            .setEnableRequireIntegrity()  // this will ensure it fails b/c the JWT is only asymmetrically encrypted
+            .setExpectedIssuer("usa")
+            .setRequireExpirationTime()
+            .build();
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
     }
 
     @Test
@@ -1843,6 +1863,264 @@ public class JwtConsumerTest
         jwt = jws.getCompactSerialization();
         claims = jwtConsumer.processToClaims(jwt);
         assertThat(claims.getClaimsMap().size(), equalTo(4));
+    }
+
+    @Test
+    public void requireIntegrityOption() throws JoseException, InvalidJwtException
+    {
+        EllipticCurveJsonWebKey jwkP256 = EcJwkGenerator.generateJwk(EllipticCurves.P256);
+        jwkP256.setKeyId("ec2");
+
+        EllipticCurveJsonWebKey jwkP384 = EcJwkGenerator.generateJwk(EllipticCurves.P384);
+        jwkP384.setKeyId("ec3");
+
+        EllipticCurveJsonWebKey jwkP512 = EcJwkGenerator.generateJwk(EllipticCurves.P521);
+        jwkP512.setKeyId("ec5");
+
+        RsaJsonWebKey jwkRSA = RsaJwkGenerator.generateJwk(2048);
+        jwkRSA.setKeyId("r2");
+
+        RsaJsonWebKey jwkRSA_b = RsaJwkGenerator.generateJwk(2048);
+        jwkRSA_b.setKeyId("r2-b");
+        
+        OctetSequenceJsonWebKey jwkOct128 = OctJwkGenerator.generateJwk(128);
+        jwkOct128.setKeyId("128bits");
+        OctetSequenceJsonWebKey jwkOct256 = OctJwkGenerator.generateJwk(256);
+        jwkOct256.setKeyId("256bits");
+        OctetSequenceJsonWebKey jwkOct512 = OctJwkGenerator.generateJwk(512);
+        jwkOct256.setKeyId("512bits");
+
+        // mixing verification and decryption keys like this without a 'use' indicator isn't wise but is just to simplify this test
+        JsonWebKeySet jsonWebKeySet = new JsonWebKeySet(jwkOct512, jwkP512, jwkOct256, jwkP256, jwkRSA, jwkP384, jwkOct128, jwkRSA_b);
+        VerificationKeyResolver verificationKeyResolver = new JwksVerificationKeyResolver(jsonWebKeySet.getJsonWebKeys());
+        DecryptionKeyResolver decryptionKeyResolver = new JwksDecryptionKeyResolver(jsonWebKeySet.getJsonWebKeys());
+
+        JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                .setExpectedAudience("a")
+                .setExpectedIssuer("i")
+                .setExpectedSubject("s")
+                .setRequireExpirationTime()
+                .setDisableRequireSignature()
+                .setEnableRequireIntegrity()
+                .setVerificationKeyResolver(verificationKeyResolver)
+                .setJwsAlgorithmConstraints(AlgorithmConstraints.DISALLOW_NONE)
+                .setDecryptionKeyResolver(decryptionKeyResolver)
+                .setJweAlgorithmConstraints(new AlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST,
+                        KeyManagementAlgorithmIdentifiers.RSA1_5,
+                        KeyManagementAlgorithmIdentifiers.PBES2_HS256_A128KW,
+                        KeyManagementAlgorithmIdentifiers.PBES2_HS384_A192KW,
+                        KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW))
+                .build();
+
+
+        JwtClaims jwtClaims = new JwtClaims();
+        jwtClaims.setAudience("a");
+        jwtClaims.setIssuer("i");
+        jwtClaims.setExpirationTimeMinutesInTheFuture(10);
+        jwtClaims.setSubject("s");
+        String claimsJson = jwtClaims.toJson();
+
+
+        // signed and encrypted is okay
+        JsonWebSignature jsonWebSignature = new JsonWebSignature();
+        jsonWebSignature.setPayload(claimsJson);
+        jsonWebSignature.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+        jsonWebSignature.setKey(jwkRSA.getRsaPrivateKey());
+        jsonWebSignature.setKeyIdHeaderValue(jwkRSA.getKeyId());
+        String jws = jsonWebSignature.getCompactSerialization();
+        JsonWebEncryption jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(jws);
+        jsonWebEncryption.setContentTypeHeaderValue("JWT");
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        String jwe = jsonWebEncryption.getCompactSerialization();
+        JwtContext jwtCtx = jwtConsumer.process(jwe);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // signed only is okay too 
+        jwtCtx = jwtConsumer.process(jws);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // signed only is okay
+        jsonWebSignature = new JsonWebSignature();
+        jsonWebSignature.setPayload(claimsJson);
+        jsonWebSignature.setAlgorithmHeaderValue(AlgorithmIdentifiers.ECDSA_USING_P384_CURVE_AND_SHA384);
+        jsonWebSignature.setKey(jwkP384.getPrivateKey());
+        jsonWebSignature.setKeyIdHeaderValue(jwkP384.getKeyId());
+        jws = jsonWebSignature.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jws);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // HMACed only is okay
+        jsonWebSignature = new JsonWebSignature();
+        jsonWebSignature.setPayload(claimsJson);
+        jsonWebSignature.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+        jsonWebSignature.setKey(jwkOct256.getKey());
+        jsonWebSignature.setKeyIdHeaderValue(jwkOct256.getKeyId());
+        jws = jsonWebSignature.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jws);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // HMACed and encrypted is okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(jws);
+        jsonWebEncryption.setContentTypeHeaderValue("JWT");
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A256KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jwe);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // HMACed only is okay
+        jsonWebSignature = new JsonWebSignature();
+        jsonWebSignature.setPayload(claimsJson);
+        jsonWebSignature.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA512);
+        jsonWebSignature.setKey(jwkOct512.getKey());
+        jsonWebSignature.setKeyIdHeaderValue(jwkOct512.getKeyId());
+        jws = jsonWebSignature.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jws);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A128KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        InvalidJwtException invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A256KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.ECDH_ES_A192KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_192_CBC_HMAC_SHA_384);
+        jsonWebEncryption.setKey(jwkP256.getECPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkP256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // symmetric encryption only is okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.A128KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkOct128.getKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkOct128.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jwe);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // symmetric encryption only is okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.DIRECT);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkOct256.getKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkOct256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jwe);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+        // symmetric encryption only is okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.A256KW);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
+        jsonWebEncryption.setKey(jwkOct256.getKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkOct256.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        jwtCtx = jwtConsumer.process(jwe);
+        assertThat(jwtCtx.getJwtClaims().getClaimsMap().size(), equalTo(4));
+
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkRSA_b.getRsaPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkRSA_b.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_192_CBC_HMAC_SHA_384);
+        jsonWebEncryption.setKey(jwkRSA_b.getRsaPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkRSA_b.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA_OAEP);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512);
+        jsonWebEncryption.setKey(jwkRSA_b.getRsaPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkRSA_b.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));
+
+        // signed with public key as hmac key attack must not work 
+        jsonWebSignature = new JsonWebSignature();
+        jsonWebSignature.setPayload(claimsJson);
+        jsonWebSignature.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+        jsonWebSignature.setKey(new HmacKey(jwkRSA.getRsaPublicKey().getEncoded()));
+        jsonWebSignature.setKeyIdHeaderValue(jwkRSA.getKeyId());
+        jws = jsonWebSignature.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jws, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.MISCELLANEOUS));
+        
+
+        // asymmetric encryption only is NOT okay
+        jsonWebEncryption = new JsonWebEncryption();
+        jsonWebEncryption.setPlaintext(claimsJson);
+        jsonWebEncryption.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.RSA1_5);
+        jsonWebEncryption.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
+        jsonWebEncryption.setKey(jwkRSA_b.getRsaPublicKey());
+        jsonWebEncryption.setKeyIdHeaderValue(jwkRSA_b.getKeyId());
+        jwe = jsonWebEncryption.getCompactSerialization();
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.MISCELLANEOUS));  // b/c  RSA1_5 was blacklisted
+        jwtConsumer.setJweAlgorithmConstraints(AlgorithmConstraints.NO_CONSTRAINTS);   // allow RSA1_5
+        invalidJwtException = SimpleJwtConsumerTestHelp.expectProcessingFailure(jwe, jwtConsumer);
+        assertTrue(invalidJwtException.hasErrorCode(ErrorCodes.INTEGRITY_MISSING));  // now fail w/ no integrity
     }
 
 

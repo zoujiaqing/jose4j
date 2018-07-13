@@ -23,6 +23,7 @@ import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.MalformedClaimException;
 import org.jose4j.jwx.JsonWebStructure;
+import org.jose4j.keys.KeyPersuasion;
 import org.jose4j.keys.resolvers.DecryptionKeyResolver;
 import org.jose4j.keys.resolvers.VerificationKeyResolver;
 import org.jose4j.lang.ExceptionHelp;
@@ -53,6 +54,7 @@ public class JwtConsumer
 
     private boolean requireSignature = true;
     private boolean requireEncryption;
+    private boolean requireIntegrity;
 
     private boolean liberalContentTypeHandling;
 
@@ -114,6 +116,11 @@ public class JwtConsumer
         this.requireEncryption = requireEncryption;
     }
 
+    void setRequireIntegrity(boolean requireIntegrity)
+    {
+        this.requireIntegrity = requireIntegrity;
+    }
+
     void setLiberalContentTypeHandling(boolean liberalContentTypeHandling)
     {
         this.liberalContentTypeHandling = liberalContentTypeHandling;
@@ -168,6 +175,7 @@ public class JwtConsumer
     {
         boolean hasSignature = false;
         boolean hasEncryption = false;
+        boolean hasSymmetricEncryption = false;
 
         ArrayList<JsonWebStructure> originalJoseObjects = new ArrayList<>(jwtContext.getJoseObjects());
 
@@ -246,6 +254,8 @@ public class JwtConsumer
                     }
 
                     hasEncryption = true;
+
+                    hasSymmetricEncryption = jwe.getKeyManagementModeAlgorithm().getKeyPersuasion() == KeyPersuasion.SYMMETRIC;
                 }
             }
             catch (JoseException e)
@@ -289,6 +299,13 @@ public class JwtConsumer
         {
             List<ErrorCodeValidator.Error> errors = Collections.singletonList(new ErrorCodeValidator.Error(ENCRYPTION_MISSING, "No encryption."));
             throw new InvalidJwtException("The JWT has no encryption but the JWT Consumer is configured to require it: " + jwtContext.getJwt(), errors, jwtContext);
+        }
+
+        if (requireIntegrity && !hasSignature && !hasSymmetricEncryption)
+        {
+            List<ErrorCodeValidator.Error> errors = Collections.singletonList(new ErrorCodeValidator.Error(ErrorCodes.INTEGRITY_MISSING, "Missing Integrity Protection"));
+            throw new InvalidJwtException("The JWT has no integrity protection (signature/MAC or symmetric AEAD encryption) " +
+                    "but the JWT Consumer is configured to require it: " + jwtContext.getJwt(), errors, jwtContext);
         }
 
         validate(jwtContext);

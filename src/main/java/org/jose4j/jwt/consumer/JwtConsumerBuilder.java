@@ -87,6 +87,8 @@ public class JwtConsumerBuilder
     private boolean requireSignature = true;
     private boolean requireEncryption;
 
+    private boolean requireIntegrity;
+
     private boolean skipSignatureVerification = false;
 
     private boolean relaxVerificationKeyValidation;
@@ -128,9 +130,21 @@ public class JwtConsumerBuilder
     }
 
     /**
+     * Require that the JWT have some integrity protection, 
+     * either a signature/MAC JWS or a JWE using a symmetric key management algorithm.
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder setEnableRequireIntegrity()
+    {
+        requireIntegrity = true;
+        return this;
+    }
+
+    /**
      * Because integrity protection is needed in most usages of JWT, a signature on the JWT is required by default.
      * Calling this turns that requirement off. It may be necessary, for example, when integrity is ensured though
-     * other means like a JWE using a symmetric key management algorithm.
+     * other means like a JWE using a symmetric key management algorithm. Use this in conjunction with
+     * {@link #setEnableRequireIntegrity()} for that case.
      * @return the same JwtConsumerBuilder
      */
     public JwtConsumerBuilder setDisableRequireSignature()
@@ -667,6 +681,7 @@ public class JwtConsumerBuilder
 
         jwtConsumer.setRequireSignature(requireSignature);
         jwtConsumer.setRequireEncryption(requireEncryption);
+        jwtConsumer.setRequireIntegrity(requireIntegrity);
 
         jwtConsumer.setLiberalContentTypeHandling(liberalContentTypeHandling);
 
