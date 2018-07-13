@@ -16,13 +16,7 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>9</version>
-  </parent>
-
+  
   <groupId>org.bitbucket.b_c</groupId>
   <artifactId>jose4j</artifactId>
   <version>0.6.4-SNAPSHOT</version>
@@ -97,6 +91,17 @@
 
   </dependencies>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>sonatype-nexus-staging</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
   <build>
       <plugins>
         <plugin>
@@ -106,6 +111,17 @@
           <configuration>
             <source>1.7</source>
             <target>1.7</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.5.3</version>
+          <configuration>
+            <autoVersionSubmodules>true</autoVersionSubmodules>
+            <useReleaseProfile>false</useReleaseProfile>
+            <releaseProfiles>release</releaseProfiles>
+            <goals>deploy</goals>
           </configuration>
         </plugin>
         <plugin>
@@ -135,7 +151,7 @@
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
           <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6</version>
+          <version>1.6.8</version>
           <extensions>true</extensions>
           <configuration>
             <serverId>sonatype-nexus-staging</serverId>
@@ -175,11 +191,11 @@
 
   <profiles>
     <profile>
-      <id>release-profile</id>
+      <id>release</id>
       <activation>
         <!--This profile will be activated when the value of maven property performRelease is true.
             When you use maven-release-plugin and run mvn release:perform, the property value will be set to true.
-            The profile can also be explicitly specified using the -P CLI option like, mvn install -P release-profile -->
+            The profile can also be explicitly specified using the -P CLI option like, mvn install -P release -->
         <property>
           <name>performRelease</name>
           <value>true</value>
