@@ -22,8 +22,7 @@ import org.jose4j.lang.InvalidKeyException;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.interfaces.RSAKey;
-import java.security.interfaces.RSAPublicKey;
+import java.security.Security;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
 
@@ -33,6 +32,7 @@ public class RsaUsingShaAlgorithm extends BaseSignatureAlgorithm implements Json
 {
     static final int TRAILER = 1;
     static final String MGF1 = "MGF1";
+    public static final String RSASSA_PSS = "RSASSA-PSS";
 
     public RsaUsingShaAlgorithm(String id, String javaAlgo)
     {
@@ -53,7 +53,7 @@ public class RsaUsingShaAlgorithm extends BaseSignatureAlgorithm implements Json
     {
         public RsaPssSha256()
         {
-            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA256, "SHA256withRSAandMGF1");
+            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA256, choosePssAlgorithmName("SHA256withRSAandMGF1"));
             MGF1ParameterSpec mgf1pec = MGF1ParameterSpec.SHA256;
             PSSParameterSpec pssSpec = new PSSParameterSpec(mgf1pec.getDigestAlgorithm(), MGF1, mgf1pec, 32, TRAILER);
             setAlgorithmParameterSpec(pssSpec);
@@ -64,7 +64,7 @@ public class RsaUsingShaAlgorithm extends BaseSignatureAlgorithm implements Json
     {
         public RsaPssSha384()
         {
-            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA384, "SHA384withRSAandMGF1");
+            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA384, choosePssAlgorithmName("SHA384withRSAandMGF1"));
             MGF1ParameterSpec mgf1pec = MGF1ParameterSpec.SHA384;
             PSSParameterSpec pssSpec = new PSSParameterSpec(mgf1pec.getDigestAlgorithm(), MGF1, mgf1pec, 48, TRAILER);
             setAlgorithmParameterSpec(pssSpec);
@@ -75,7 +75,7 @@ public class RsaUsingShaAlgorithm extends BaseSignatureAlgorithm implements Json
     {
         public RsaPssSha512()
         {
-            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA512, "SHA512withRSAandMGF1");
+            super(AlgorithmIdentifiers.RSA_PSS_USING_SHA512, choosePssAlgorithmName("SHA512withRSAandMGF1"));
             MGF1ParameterSpec mgf1pec = MGF1ParameterSpec.SHA512;
             PSSParameterSpec pssSpec = new PSSParameterSpec(mgf1pec.getDigestAlgorithm(), MGF1, mgf1pec, 64, TRAILER);
             setAlgorithmParameterSpec(pssSpec);
@@ -104,5 +104,18 @@ public class RsaUsingShaAlgorithm extends BaseSignatureAlgorithm implements Json
         {
             super(AlgorithmIdentifiers.RSA_USING_SHA512, "SHA512withRSA");
         }
+    }
+
+    static String choosePssAlgorithmName(String legacyName)
+    {
+        for (String sigAlg : Security.getAlgorithms("Signature"))
+        {
+            if (RSASSA_PSS.equalsIgnoreCase(sigAlg))
+            {
+                return sigAlg;
+            }
+        }
+
+        return legacyName;
     }
 }
