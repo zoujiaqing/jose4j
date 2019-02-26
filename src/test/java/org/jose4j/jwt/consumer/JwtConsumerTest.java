@@ -2124,6 +2124,8 @@ public class JwtConsumerTest
     }
 
 
+
+
     @Test
     public void someBasicAudChecks() throws InvalidJwtException
     {
@@ -2242,13 +2244,25 @@ public class JwtConsumerTest
         jwtClaims = JwtClaims.parse("{\"iss\":\"x\"}");
         SimpleJwtConsumerTestHelp.expectValidationFailure(jwtClaims, jwtConsumer);
 
-        // just establish how it works on some odd edge null cases
+
+        JwtClaims withIss = JwtClaims.parse("{\"iss\":\"x\"}");
+        JwtClaims noIss = JwtClaims.parse("{\"notiss\":\"meh\"}");
+
         jwtConsumer = new JwtConsumerBuilder().setExpectedIssuer(true, null).build();
-        SimpleJwtConsumerTestHelp.goodValidate(jwtClaims, jwtConsumer);
+        SimpleJwtConsumerTestHelp.goodValidate(withIss, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectValidationFailureWithErrorCode(noIss, jwtConsumer, ErrorCodes.ISSUER_MISSING);
+
+        jwtConsumer = new JwtConsumerBuilder().setExpectedIssuer(null).build();
+        SimpleJwtConsumerTestHelp.goodValidate(withIss, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectValidationFailureWithErrorCode(noIss, jwtConsumer, ErrorCodes.ISSUER_MISSING);
+
         jwtConsumer = new JwtConsumerBuilder().setExpectedIssuers(true).build();
-        SimpleJwtConsumerTestHelp.goodValidate(jwtClaims, jwtConsumer);
-        jwtConsumer = new JwtConsumerBuilder().setExpectedIssuers(true).build();
-        SimpleJwtConsumerTestHelp.goodValidate(jwtClaims, jwtConsumer);
+        SimpleJwtConsumerTestHelp.goodValidate(withIss, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectValidationFailureWithErrorCode(noIss, jwtConsumer, ErrorCodes.ISSUER_MISSING);
+
+        jwtConsumer = new JwtConsumerBuilder().setExpectedIssuers(true, null).build();
+        SimpleJwtConsumerTestHelp.goodValidate(withIss, jwtConsumer);
+        SimpleJwtConsumerTestHelp.expectValidationFailureWithErrorCode(noIss, jwtConsumer, ErrorCodes.ISSUER_MISSING);
     }
 
     @Test

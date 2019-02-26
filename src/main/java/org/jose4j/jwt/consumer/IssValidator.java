@@ -56,7 +56,7 @@ public class IssValidator implements ErrorCodeValidator
 
         if (issuer == null)
         {
-            return requireIssuer ? new Error(ErrorCodes.ISSUER_MISSING, "No Issuer (iss) claim present but was expecting " + expectedValue()) : null;
+            return requireIssuer ? new Error(ErrorCodes.ISSUER_MISSING, "No Issuer (iss) claim present.") : null;
         }
 
         if (expectedIssuers != null && !expectedIssuers.contains(issuer))
