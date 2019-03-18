@@ -168,6 +168,9 @@
               <manifestFile>
                 ${project.build.outputDirectory}/META-INF/MANIFEST.MF
               </manifestFile>
+              <manifestEntries>
+                <Automatic-Module-Name>org.jose4j</Automatic-Module-Name>
+              </manifestEntries>
             </archive>
           </configuration>
         </plugin>
