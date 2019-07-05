@@ -73,7 +73,7 @@ public class MacUtil
         }
         catch (InvalidKeyException e)
         {
-            throw new org.jose4j.lang.InvalidKeyException("Key is not valid for " + mac.getAlgorithm(), e);
+            throw new org.jose4j.lang.InvalidKeyException("Key is not valid for " + mac.getAlgorithm() + " - " + e, e);
         }
     }
 }

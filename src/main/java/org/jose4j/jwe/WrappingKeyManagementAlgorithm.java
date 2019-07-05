@@ -107,11 +107,11 @@ public abstract class WrappingKeyManagementAlgorithm extends AlgorithmInfo imple
         }
         catch  (InvalidKeyException e)
         {
-            throw new org.jose4j.lang.InvalidKeyException("Unable to initialize cipher ("+cipher.getAlgorithm()+") for key decryption", e);
+            throw new org.jose4j.lang.InvalidKeyException("Unable to initialize cipher ("+cipher.getAlgorithm()+") for key decryption - " + e, e);
         }
         catch (InvalidAlgorithmParameterException e)
         {
-            throw new JoseException("Unable to initialize cipher ("+cipher.getAlgorithm()+") for key decryption", e);
+            throw new JoseException("Unable to initialize cipher ("+cipher.getAlgorithm()+") for key decryption - " + e, e);
         }
 
         String cekAlg = cekDesc.getContentEncryptionKeyAlgorithm();

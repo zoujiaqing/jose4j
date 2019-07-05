@@ -176,7 +176,7 @@ public class EcdhKeyAgreementAlgorithm extends AlgorithmInfo implements KeyManag
         }
         catch (java.security.InvalidKeyException e)
         {
-            throw new InvalidKeyException("Invalid Key for " + getJavaAlgorithm() + " key agreement." ,e);
+            throw new InvalidKeyException("Invalid Key for " + getJavaAlgorithm() + " key agreement - " + e, e);
         }
 
         return keyAgreement.generateSecret();
