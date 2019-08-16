@@ -283,6 +283,18 @@ public class JwtClaims
     }
 
     /**
+     * Gets the value of the claim, if present, as a string by calling toString on the value returned by
+     * {@link #getClaimValue(String)}.
+     * @param claimName the claim name
+     * @return the claim value as a String or null if no such named claim is present
+     */
+    public String getClaimValueAsString(String claimName)
+    {
+        Object claimObjectValue = getClaimValue(claimName);
+        return claimObjectValue != null ? claimObjectValue.toString() : null;
+    }
+
+    /**
      * Gets the value of the claim as a List of Strings, which assumes that it is a JSON array of strings.
      * @param claimName the name of the claim
      * @return a {@code List<String>} with the values of the claim. Empty list, if the claim is not present.

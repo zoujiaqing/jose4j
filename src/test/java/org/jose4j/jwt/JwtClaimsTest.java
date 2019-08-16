@@ -412,6 +412,55 @@ public class JwtClaimsTest
     }
 
     @Test
+    public void testStringGettingHelpers() throws InvalidJwtException, MalformedClaimException
+    {
+        String json = "{\"name\": 11223344}";
+        JwtClaims claims = JwtClaims.parse(json);
+
+        String valueAsString = claims.getClaimValueAsString("name");
+        Assert.assertThat("11223344", equalTo(valueAsString));
+
+        Long numberValue = claims.getClaimValue("name", Long.class);
+        Assert.assertThat(11223344L, equalTo(numberValue));
+
+        try
+        {
+            String value = claims.getStringClaimValue("name");
+            Assert.fail("getStringClaimValue should throw ex on number value but " + value);
+        }
+        catch (MalformedClaimException e)
+        {
+            // expected
+        }
+
+        String nopeValue = claims.getClaimValueAsString("nope");
+        Assert.assertNull(nopeValue);
+
+        json = "{\"name\": true}";
+        claims = JwtClaims.parse(json);
+
+        valueAsString = claims.getClaimValueAsString("name");
+        Assert.assertThat("true", equalTo(valueAsString));
+
+        Boolean booValue = claims.getClaimValue("name", Boolean.class);
+        Assert.assertThat(true, equalTo(booValue));
+
+        try
+        {
+            String value = claims.getStringClaimValue("name");
+            Assert.fail("getStringClaimValue should throw ex on number value but " + value);
+        }
+        catch (MalformedClaimException e)
+        {
+            // expected
+        }
+
+        nopeValue = claims.getClaimValueAsString("nope");
+        Assert.assertNull(nopeValue);
+
+    }
+
+    @Test
     public void testSomeSettingAndGettingHelpers() throws InvalidJwtException, MalformedClaimException
     {
         JwtClaims jcs = new JwtClaims();
