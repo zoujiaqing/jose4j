@@ -86,7 +86,7 @@ public class HttpsJwksVerificationKeyResolver implements VerificationKeyResolver
         return theChosenOne.getKey();
     }
 
-    private JsonWebKey select(JsonWebSignature jws, List<JsonWebKey> jsonWebKeys) throws JoseException
+    protected JsonWebKey select(JsonWebSignature jws, List<JsonWebKey> jsonWebKeys) throws JoseException
     {
         if (disambiguateWithVerifySignature)
         {
