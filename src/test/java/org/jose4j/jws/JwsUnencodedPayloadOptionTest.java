@@ -53,7 +53,7 @@ public class JwsUnencodedPayloadOptionTest
         jws.setKey(jwk.getKey());
         jws.setPayload(payload);
         assertTrue(jws.verifySignature());
-        assertThat(payload, equalTo(controlJws.getPayload()));
+        assertThat(payload, equalTo(jws.getPayload()));
 
         // reconstruct the example with unencoded and detached payload from https://tools.ietf.org/html/rfc7797#section-4.2
         // the header just works out being the same based on (a little luck and) setting headers order and how the JSON is produced
@@ -66,7 +66,7 @@ public class JwsUnencodedPayloadOptionTest
         jws.setPayload(payload);
         String detachedContentCompactSerialization = jws.getDetachedContentCompactSerialization();
         assertThat(detachedUnencoded, equalTo(detachedContentCompactSerialization));
-        assertThat(payload, equalTo(controlJws.getPayload()));
+        assertThat(payload, equalTo(jws.getUnverifiedPayload()));
     }
 
 
