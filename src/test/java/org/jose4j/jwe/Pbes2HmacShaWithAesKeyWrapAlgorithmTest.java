@@ -162,7 +162,7 @@ public class Pbes2HmacShaWithAesKeyWrapAlgorithmTest
         String saltInputString = Base64Url.encode(ByteUtil.randomBytes(saltByteLength));
         encryptingJwe.getHeaders().setStringHeaderValue(HeaderParameterNames.PBES2_SALT_INPUT, saltInputString);
         long iterationCount = 1024L;
-        encryptingJwe.getHeaders().setObjectHeaderValue(HeaderParameterNames.PBES2_ITERATION_COUNT, iterationCount);
+        encryptingJwe.setHeader(HeaderParameterNames.PBES2_ITERATION_COUNT, iterationCount);
 
         encryptingJwe.setAlgorithmHeaderValue(PBES2_HS384_A192KW);
         encryptingJwe.setEncryptionMethodHeaderParameter(AES_192_CBC_HMAC_SHA_384);

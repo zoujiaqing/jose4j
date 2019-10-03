@@ -722,7 +722,8 @@ public void RFC7797JwsUnencodedPayloadOption() throws Exception
 
     // Set the "b64" header to false, which indicates that the payload is not encoded
     // when calculating the signature (per RFC 7797)
-    signerJws.getHeaders().setObjectHeaderValue(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD, false);
+    signerJws.setHeader(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD, false);
+    //     signerJws.getHeaders().setObjectHeaderValue(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD, false); with older versions
 
     // RFC 7797 requires that the "b64" header be listed as critical
     signerJws.setCriticalHeaderNames(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD);

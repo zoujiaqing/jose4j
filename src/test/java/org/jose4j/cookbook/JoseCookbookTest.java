@@ -926,14 +926,13 @@ public class JoseCookbookTest
         jwe.setKey(new PbkdfKey(password));
 
         jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.PBES2_HS512_A256KW);
-        Headers headers = jwe.getHeaders();
-        headers.setStringHeaderValue(HeaderParameterNames.PBES2_SALT_INPUT, "8Q1SzinasR3xchYz6ZZcHA");
-        headers.setObjectHeaderValue(HeaderParameterNames.PBES2_ITERATION_COUNT, 8192L);
-        headers.setStringHeaderValue("cty", "jwk-set+json");
+        jwe.setHeader(HeaderParameterNames.PBES2_SALT_INPUT, "8Q1SzinasR3xchYz6ZZcHA");
+        jwe.setHeader(HeaderParameterNames.PBES2_ITERATION_COUNT, 8192L);
+        jwe.setHeader("cty", "jwk-set+json");
         jwe.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256);
 
         // set the IV and cek per the example (you wouldn't usually do this but it makes the output
-        // more deterministic so it can be compared to the example)
+        // deterministic so it can be compared to the example)
         jwe.setEncodedContentEncryptionKey("uwsjJXaBK407Qaf0_zpcpmr1Cs0CC50hIUEyGNEt3m0");
         jwe.setEncodedIv("VBiCzVHNoLiR3F4V82uoTQ");
 

@@ -146,6 +146,16 @@ public abstract class JsonWebStructure
         return headers.getStringHeaderValue(name);
     }
 
+    public void setHeader(String name, Object value)
+    {
+        headers.setObjectHeaderValue(name, value);
+    }
+
+    public Object getObjectHeader(String name)
+    {
+        return headers.getObjectHeaderValue(name);
+    }
+
     public void setAlgorithmHeaderValue(String alg)
     {
         setHeader(HeaderParameterNames.ALGORITHM, alg);

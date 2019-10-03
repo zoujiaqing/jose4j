@@ -12,8 +12,7 @@ import java.security.Key;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.jose4j.jwa.AlgorithmConstraints.ConstraintType.*;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -67,6 +66,50 @@ public class JwsUnencodedPayloadOptionTest
         String detachedContentCompactSerialization = jws.getDetachedContentCompactSerialization();
         assertThat(detachedUnencoded, equalTo(detachedContentCompactSerialization));
         assertThat(payload, equalTo(jws.getUnverifiedPayload()));
+    }
+
+    @Test
+    public void rfc7797ExampleWithDirectJwsSetHeader() throws Exception
+    {
+        // the key and payload are from https://tools.ietf.org/html/rfc7797#section-4
+        String payload = "$.02";
+
+        JsonWebKey jwk = JsonWebKey.Factory.newJwk(
+                "   {\n" +
+                        "      \"kty\":\"oct\",\n" +
+                        "      \"k\":\"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75\n" +
+                        "           aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow\"\n" +
+                        "   }\n");
+
+
+        // Test verifying the example with unencoded and detached payload from https://tools.ietf.org/html/rfc7797#section-4.2
+        String detachedUnencoded = "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY";
+
+
+        // reconstruct the example with unencoded and detached payload from https://tools.ietf.org/html/rfc7797#section-4.2
+        // the header just works out being the same based on (a little luck and) setting headers order and how the JSON is produced
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+        jws.setHeader(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD, false);
+        jws.setCriticalHeaderNames(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD);
+        jws.setPayloadCharEncoding(StringUtil.US_ASCII);
+        jws.setKey(jwk.getKey());
+        jws.setPayload(payload);
+        String detachedContentCompactSerialization = jws.getDetachedContentCompactSerialization();
+        assertThat(detachedUnencoded, equalTo(detachedContentCompactSerialization));
+        assertThat(payload, equalTo(jws.getUnverifiedPayload()));
+
+        jws = new JsonWebSignature();
+        jws.setAlgorithmConstraints(new AlgorithmConstraints(WHITELIST, AlgorithmIdentifiers.HMAC_SHA256));
+        jws.setPayloadCharEncoding(StringUtil.US_ASCII);
+        jws.setCompactSerialization(detachedUnencoded);
+        jws.setKey(jwk.getKey());
+        jws.setPayload(payload);
+        assertTrue(jws.verifySignature());
+        assertThat(payload, equalTo(jws.getPayload()));
+        Object objectHeader = jws.getObjectHeader(HeaderParameterNames.BASE64URL_ENCODE_PAYLOAD);
+        assertFalse((boolean)objectHeader);
+
     }
 
 
