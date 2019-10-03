@@ -472,7 +472,34 @@ public class JwtConsumerTest
                 .setExpectedAudience("canada")
                 .setExpectedIssuer("usa")
                 .setRequireExpirationTime()
+                .setJwsAlgorithmConstraints(AlgorithmConstraints.ConstraintType.WHITELIST, AlgorithmIdentifiers.HMAC_SHA256)
+                .setJweAlgorithmConstraints(AlgorithmConstraints.ConstraintType.WHITELIST, KeyManagementAlgorithmIdentifiers.A128KW)
+                .setJweContentEncryptionAlgorithmConstraints(AlgorithmConstraints.ConstraintType.WHITELIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256)
+                .build();
+        jwtClaims = consumer.processToClaims(jwt);
+        Assert.assertThat("eh", equalTo(jwtClaims.getStringClaimValue("message")));
+        consumer.processContext(jwtContext);
+
+
+        consumer = new JwtConsumerBuilder()
+                .setDecryptionKey(wrapKey.getKey())
+                .setVerificationKey(macKey.getKey())
+                .setEvaluationTime(NumericDate.fromSeconds(1419982016))
+                .setExpectedAudience("canada")
+                .setExpectedIssuer("usa")
+                .setRequireExpirationTime()
                 .setJwsAlgorithmConstraints(new AlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST, AlgorithmIdentifiers.HMAC_SHA256))
+                .build();
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
+
+        consumer = new JwtConsumerBuilder()
+                .setDecryptionKey(wrapKey.getKey())
+                .setVerificationKey(macKey.getKey())
+                .setEvaluationTime(NumericDate.fromSeconds(1419982016))
+                .setExpectedAudience("canada")
+                .setExpectedIssuer("usa")
+                .setRequireExpirationTime()
+                .setJwsAlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST, AlgorithmIdentifiers.HMAC_SHA256)
                 .build();
         SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
 
@@ -494,7 +521,29 @@ public class JwtConsumerTest
                 .setExpectedAudience("canada")
                 .setExpectedIssuer("usa")
                 .setRequireExpirationTime()
+                .setJweAlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST, KeyManagementAlgorithmIdentifiers.A128KW)
+                .build();
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
+
+        consumer = new JwtConsumerBuilder()
+                .setDecryptionKey(wrapKey.getKey())
+                .setVerificationKey(macKey.getKey())
+                .setEvaluationTime(NumericDate.fromSeconds(1419982016))
+                .setExpectedAudience("canada")
+                .setExpectedIssuer("usa")
+                .setRequireExpirationTime()
                 .setJweContentEncryptionAlgorithmConstraints(new AlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256))
+                .build();
+        SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
+
+        consumer = new JwtConsumerBuilder()
+                .setDecryptionKey(wrapKey.getKey())
+                .setVerificationKey(macKey.getKey())
+                .setEvaluationTime(NumericDate.fromSeconds(1419982016))
+                .setExpectedAudience("canada")
+                .setExpectedIssuer("usa")
+                .setRequireExpirationTime()
+                .setJweContentEncryptionAlgorithmConstraints(AlgorithmConstraints.ConstraintType.BLACKLIST, ContentEncryptionAlgorithmIdentifiers.AES_128_CBC_HMAC_SHA_256)
                 .build();
         SimpleJwtConsumerTestHelp.expectProcessingFailure(jwt, jwtContext, consumer);
 

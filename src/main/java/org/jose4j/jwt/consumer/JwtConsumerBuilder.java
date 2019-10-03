@@ -256,6 +256,42 @@ public class JwtConsumerBuilder
     }
 
     /**
+     * Set the JWS algorithm constraints to be applied when processing the JWT.
+     * @param type the type of constraint i.e. blacklist or whitelist
+     * @param algorithms the algorithms to be allowed or disallowed depending on the constraint type
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder setJwsAlgorithmConstraints(AlgorithmConstraints.ConstraintType type, String... algorithms)
+    {
+        jwsAlgorithmConstraints = new AlgorithmConstraints(type, algorithms);
+        return this;
+    }
+
+    /**
+     * Set the JWE algorithm constraints to be applied to key management when processing the JWT.
+     * @param type the type of constraint i.e. blacklist or whitelist
+     * @param algorithms the algorithms to be allowed or disallowed depending on the constraint type
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder setJweAlgorithmConstraints(AlgorithmConstraints.ConstraintType type, String... algorithms)
+    {
+        jweAlgorithmConstraints = new AlgorithmConstraints(type, algorithms);
+        return this;
+    }
+
+    /**
+     * Set the JWE algorithm constraints to be applied to content encryption when processing the JWT.
+     * @param type the type of constraint i.e. blacklist or whitelist
+     * @param algorithms the algorithms to be allowed or disallowed depending on the constraint type
+     * @return the same JwtConsumerBuilder
+     */
+    public JwtConsumerBuilder setJweContentEncryptionAlgorithmConstraints(AlgorithmConstraints.ConstraintType type, String... algorithms)
+    {
+        jweContentEncryptionAlgorithmConstraints = new AlgorithmConstraints(type, algorithms);
+        return this;
+    }
+
+    /**
      * Set the key to be used for JWS signature/MAC verification.
      * @param verificationKey the verification key.
      * @return the same JwtConsumerBuilder
