@@ -26,6 +26,7 @@ import org.jose4j.keys.X509Util;
 import org.jose4j.lang.InvalidAlgorithmException;
 import org.jose4j.lang.JoseException;
 
+import java.lang.reflect.Array;
 import java.security.Key;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -324,19 +325,27 @@ public abstract class JsonWebStructure
         final Object criticalHeaderObjectValue = headers.getObjectHeaderValue(HeaderParameterNames.CRITICAL);
         if (criticalHeaderObjectValue != null)
         {
-            try
+            List<String> criticalHeaders;
+
+            if (criticalHeaderObjectValue instanceof List)
             {
-                for (String criticalHeader : (List<String>) criticalHeaderObjectValue)
-                {
-                    if (!knownCriticalHeaders.contains(criticalHeader) && !isSupportedCriticalHeader(criticalHeader))
-                    {
-                        throw new JoseException("Unrecognized header '" + criticalHeader + "' marked as critical.");
-                    }
-                }
+                criticalHeaders = (List<String>) criticalHeaderObjectValue;
             }
-            catch (ClassCastException e)
+            else if (criticalHeaderObjectValue instanceof String[])
             {
-                throw new JoseException(HeaderParameterNames.CRITICAL + " header value not an array.");
+                criticalHeaders = Arrays.asList((String[]) criticalHeaderObjectValue);
+            }
+            else
+            {
+                throw new JoseException(HeaderParameterNames.CRITICAL + " header value not an array ("+criticalHeaderObjectValue.getClass()+").");
+            }
+
+            for (String criticalHeader : criticalHeaders)
+            {
+                if (!knownCriticalHeaders.contains(criticalHeader) && !isSupportedCriticalHeader(criticalHeader))
+                {
+                    throw new JoseException("Unrecognized header '" + criticalHeader + "' marked as critical.");
+                }
             }
         }
     }
