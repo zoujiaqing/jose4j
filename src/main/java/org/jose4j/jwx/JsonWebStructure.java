@@ -21,6 +21,7 @@ import org.jose4j.jca.ProviderContext;
 import org.jose4j.jwa.Algorithm;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwe.JsonWebEncryption;
+import org.jose4j.jwk.PublicJsonWebKey;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.keys.X509Util;
 import org.jose4j.lang.InvalidAlgorithmException;
@@ -184,6 +185,29 @@ public abstract class JsonWebStructure
     public String getKeyIdHeaderValue()
     {
         return getHeader(HeaderParameterNames.KEY_ID);
+    }
+
+    /**
+     * Gets the "jwk" (JSON Web Key) Header Parameter per
+     * https://tools.ietf.org/html/rfc7515#section-4.1.3 and/or
+     * https://tools.ietf.org/html/rfc7516#section-4.1.5
+     * @return PublicJsonWebKey representation of the "jwk" header
+     * @throws JoseException if something goes wrong processing the "jwk" header content into a PublicJsonWebKey
+     */
+    public PublicJsonWebKey getJwkHeader() throws JoseException
+    {
+        return headers.getPublicJwkHeaderValue(HeaderParameterNames.JWK, null);
+    }
+
+    /**
+     * Sets the "jwk" (JSON Web Key) Header Parameter per
+     * https://tools.ietf.org/html/rfc7515#section-4.1.3 and/or
+     * https://tools.ietf.org/html/rfc7516#section-4.1.5
+     * @param jwk the PublicJsonWebKey representation of the JWK that will be set as the "jwk" header
+     */
+    public void setJwkHeader(PublicJsonWebKey jwk)
+    {
+        headers.setJwkHeaderValue(HeaderParameterNames.JWK, jwk);
     }
 
     public X509Certificate getLeafCertificateHeaderValue() throws JoseException
