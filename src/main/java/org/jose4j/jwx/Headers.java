@@ -92,14 +92,14 @@ public class Headers
     {
         Object objectHeaderValue = getObjectHeaderValue(name);
         Map<String, Object> jwkParams = (Map<String, Object>) objectHeaderValue;
-        return JsonWebKey.Factory.newJwk(jwkParams);
+        return jwkParams != null ? JsonWebKey.Factory.newJwk(jwkParams) : null;
     }
 
     public PublicJsonWebKey getPublicJwkHeaderValue(String name, String jcaProvider) throws JoseException
     {
         Object objectHeaderValue = getObjectHeaderValue(name);
         Map<String, Object> jwkParams = (Map<String, Object>) objectHeaderValue;
-        return PublicJsonWebKey.Factory.newPublicJwk(jwkParams, jcaProvider);
+        return jwkParams != null ? PublicJsonWebKey.Factory.newPublicJwk(jwkParams, jcaProvider) : null;
     }
 
 
